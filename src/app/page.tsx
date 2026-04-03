@@ -71,7 +71,15 @@ export default function Home() {
   useEffect(() => {
     fetch("/api/status").then(r => r.json()).then(d => setStats(d.stats)).catch(() => {});
     fetch("/api/editions").then(r => r.json()).then(d => {
-      if (d.editions?.[0]) setLatestEdition({ edition: d.editions[0], signals: [] });
+      if (d.editions?.[0]) {
+        setLatestEdition({ edition: d.editions[0], signals: [] });
+        // Fetch signals for the latest edition
+        fetch(`/api/editions/${d.editions[0].id}`).then(r => r.json()).then(detail => {
+          if (detail.signals) {
+            setLatestEdition({ edition: d.editions[0], signals: detail.signals });
+          }
+        }).catch(() => {});
+      }
     }).catch(() => {});
     fetch("/api/financials").then(r => r.json()).then(d => setEconomy(d)).catch(() => {});
   }, []);
