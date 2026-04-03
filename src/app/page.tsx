@@ -246,7 +246,7 @@ export default function Home() {
                 <p className="font-serif text-xl text-[var(--muted)] leading-relaxed italic mb-10">
                   &ldquo;{latestEdition.edition.summary}&rdquo;
                 </p>
-                <Link href={`/editions/${latestEdition.edition.id}`} className="inline-block bg-[#111] text-white px-10 py-5 font-mono text-xs uppercase tracking-widest font-bold hover:bg-[var(--accent)] transition-all">
+                <Link href={`/editions/${latestEdition.edition.id}`} className="inline-block bg-[var(--accent)] text-white px-10 py-5 font-mono text-xs uppercase tracking-widest font-bold hover:bg-[#111] transition-all">
                   Access Dispatch ($0.05)
                 </Link>
               </div>
