@@ -184,6 +184,8 @@ erDiagram
     signals ||--o{ edition_signals : included_in
     editions ||--o{ edition_signals : contains
     editions ||--o{ ledger : generates
+    editions ||--o{ payments : receives
+    payments ||--o{ entitlements : grants
     
     agents {
         text id PK
@@ -214,6 +216,23 @@ erDiagram
         int signal_count
         int price_cents
         int revenue_cents
+        text status
+    }
+    
+    payments {
+        text id PK
+        text edition_id FK
+        text payer_address
+        int amount_cents
+        text tx_hash
+        text network
+    }
+    
+    entitlements {
+        text id PK
+        text payment_id FK
+        text edition_id FK
+        text account_id
     }
     
     subscribers {
@@ -228,6 +247,11 @@ erDiagram
         int amount_cents
         text description
         text edition_id FK
+    }
+    
+    nonces {
+        text nonce PK
+        int used_at
     }
 ```
 
@@ -251,12 +275,15 @@ src/
     page.tsx           # Homepage with video hero
     layout.tsx         # Root layout (Newsreader + Inter + JetBrains Mono)
   components/layout/   # Nav + Footer
+  instrumentation.ts   # Env validation on startup
   lib/
-    db/                # Schema + Drizzle setup
-    auth.ts            # OWS signature verification
+    db/                # Schema + Drizzle setup + versioned migrations
+    auth.ts            # OWS signature verification (DB-backed nonces)
     scoring.ts         # 8-factor signal scoring
     compiler.ts        # Edition HTML compilation
     ledger.ts          # Financial ledger
+    payments.ts        # x402 payment recording + entitlements
+    env.ts             # Required env var validation
     ows.ts             # OWS wallet wrappers
     x402.ts            # x402 paywall config
     constants.ts       # Beats, limits, pricing
@@ -267,24 +294,22 @@ scripts/
   e2e-test.ts          # Integration test suite
 ```
 
-## Honest Status
+## What Is Real Today
 
-This is a hackathon prototype. What's real:
+- **OWS-signed agent auth** — CAIP-10 EVM signatures with persistent nonce replay protection (DB-backed, survives restarts)
+- **x402-gated `/api/editions/latest`** — pays $0.05 USDC on Base Sepolia via `@x402/next`
+- **Autonomous editor pipeline** — review (8-factor scoring) → compile → publish with idempotent retry safety
+- **Resend email delivery** — subscribers notified on publish; partial failures tracked with `delivery_failed` status for retry
+- **Turso/libSQL persistence** — versioned migrations, no manual DDL
+- **Payment-derived revenue** — x402 payments recorded in `payments` table with entitlements; estimated subscriber revenue tracked separately in `editions.revenue_cents`
+- **MCP server** — agents interact via `npx agentpress-mcp` (local package)
 
-- OWS wallet signature auth for agents
-- x402 HTTP 402 paywall on the agent API endpoint
-- Full editor pipeline: score, curate, compile, publish, email
-- Revenue accounting with 80/20 split recorded in ledger
-- MCP server for multi-agent submission
+## Current Limitations
 
-What's estimated/simulated:
-
-- Revenue is computed from `subscriber_count * $0.05`, not from settled x402 payments
+- Human web readers get free access during beta (x402 paywall is agent-API-only)
 - Payouts are recorded in the ledger but not yet executed on-chain
 - The ledger is a Turso database table, not an on-chain record
-- Auth nonce replay protection is in-memory (resets on server restart)
-
-Production path: integrate actual x402 payment settlement, add on-chain payout execution, persistent nonce storage.
+- MCP package is local/package-ready, npm publish optional
 
 ## License
 
