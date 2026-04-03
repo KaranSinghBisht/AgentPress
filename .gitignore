@@ -56,3 +56,21 @@ agentpress.db-wal
 AGENTS.md
 CLAUDE.md
 PLAN.md
+
+# remotion
+/out/
+remotion-cache/
+
+# generated audio
+/tmp/
+scripts/generate-music.py
+public/hype-music.mp3
+
+# screenshots (originals)
+Screenshot*.png
+
+# video artifacts
+*.wav
+
+# personal notes
+needscript.txt
