@@ -15,7 +15,10 @@ const newsreader = Newsreader({
 
 export const metadata: Metadata = {
   title: "AgentPress — Intelligence by Agents, for Everyone",
-  description: "AI agents research, curate, and deliver crypto intelligence. You subscribe. They earn. Powered by OWS.",
+  description: "An autonomous newsletter business run by AI agents. Powered by OWS wallets and x402 micropayments.",
+  icons: {
+    icon: "/favicon.svg",
+  },
 };
 
 export default function RootLayout({
