@@ -339,6 +339,214 @@ async function testSubscribeAndPublishFlow() {
   }
 }
 
+async function testPublishRetryIdempotency() {
+  console.log("\n[16] Publish retry idempotency");
+
+  const db = getTestDb();
+  let testSignalId: string | null = null;
+  let testEditionId: string | null = null;
+
+  try {
+    const agentResult = await db.execute("SELECT id FROM agents LIMIT 1");
+    const agent = agentResult.rows[0] as unknown as { id: string } | undefined;
+
+    if (!agent) {
+      console.log("  SKIP  no agents in DB — cannot test publish retry");
+      return;
+    }
+
+    // Insert test signal + force to included
+    testSignalId = uuidv4();
+    const now = new Date().toISOString();
+    await db.execute({
+      sql: `INSERT INTO signals (id, agent_id, headline, body, sources, tags, beat, status, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, 'included', ?, ?)`,
+      args: [
+        testSignalId,
+        agent.id,
+        "Retry test signal",
+        "Testing publish retry idempotency.",
+        JSON.stringify(["https://example.com"]),
+        JSON.stringify(["test"]),
+        "bitcoin",
+        now,
+        now,
+      ],
+    });
+
+    // Compile
+    const compileRes = await post(
+      "/api/editor/compile",
+      {},
+      { "x-editor-key": "dev-editor-key-change-in-prod" }
+    );
+    ok("compile responds 200", compileRes.status === 200);
+    testEditionId = compileRes.body?.edition?.id ?? null;
+
+    if (!testEditionId) {
+      console.log("  SKIP  compile failed — cannot test publish retry");
+      return;
+    }
+
+    // First publish
+    const pub1 = await post(
+      "/api/editor/publish",
+      {},
+      { "x-editor-key": "dev-editor-key-change-in-prod" }
+    );
+    ok("first publish responds 200", pub1.status === 200);
+    ok("first publish status is published", pub1.body?.status === "published");
+
+    // Count ledger entries for this edition
+    const ledger1 = await db.execute({
+      sql: "SELECT COUNT(*) as cnt FROM ledger WHERE edition_id = ?",
+      args: [testEditionId],
+    });
+    const count1 = Number((ledger1.rows[0] as unknown as { cnt: number }).cnt);
+
+    // Second publish (retry) — should be idempotent
+    const pub2 = await post(
+      "/api/editor/publish",
+      {},
+      { "x-editor-key": "dev-editor-key-change-in-prod" }
+    );
+    ok("retry publish responds 200", pub2.status === 200);
+    ok("retry publish is idempotent", pub2.body?.alreadyPublished === true);
+
+    // Verify no duplicate ledger entries
+    const ledger2 = await db.execute({
+      sql: "SELECT COUNT(*) as cnt FROM ledger WHERE edition_id = ?",
+      args: [testEditionId],
+    });
+    const count2 = Number((ledger2.rows[0] as unknown as { cnt: number }).cnt);
+    ok(`no duplicate ledger entries (${count1} === ${count2})`, count1 === count2);
+
+    // Verify edition status in DB
+    const edResult = await db.execute({
+      sql: "SELECT status FROM editions WHERE id = ?",
+      args: [testEditionId],
+    });
+    const edStatus = (edResult.rows[0] as unknown as { status: string })?.status;
+    ok("edition status is 'published'", edStatus === "published");
+  } catch (err) {
+    console.error(`  FAIL  publish retry error: ${err}`);
+    failed++;
+  } finally {
+    try {
+      if (testEditionId) {
+        await db.execute({ sql: "DELETE FROM edition_signals WHERE edition_id = ?", args: [testEditionId] });
+        await db.execute({ sql: "DELETE FROM ledger WHERE edition_id = ?", args: [testEditionId] });
+        await db.execute({ sql: "DELETE FROM editions WHERE id = ?", args: [testEditionId] });
+      }
+      if (testSignalId) {
+        await db.execute({ sql: "DELETE FROM signals WHERE id = ?", args: [testSignalId] });
+      }
+    } catch (cleanErr) {
+      console.error(`  FAIL  retry test cleanup error: ${cleanErr}`);
+      failed++;
+    }
+  }
+}
+
+async function testEditionStatusFlow() {
+  console.log("\n[17] Edition status flow (compiled -> published)");
+
+  const db = getTestDb();
+  let testSignalId: string | null = null;
+  let testEditionId: string | null = null;
+
+  try {
+    const agentResult = await db.execute("SELECT id FROM agents LIMIT 1");
+    const agent = agentResult.rows[0] as unknown as { id: string } | undefined;
+
+    if (!agent) {
+      console.log("  SKIP  no agents in DB");
+      return;
+    }
+
+    testSignalId = uuidv4();
+    const now = new Date().toISOString();
+    await db.execute({
+      sql: `INSERT INTO signals (id, agent_id, headline, body, sources, tags, beat, status, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, 'included', ?, ?)`,
+      args: [
+        testSignalId,
+        agent.id,
+        "Status flow test signal",
+        "Testing edition status transitions.",
+        JSON.stringify(["https://example.com"]),
+        JSON.stringify(["test"]),
+        "defi",
+        now,
+        now,
+      ],
+    });
+
+    // Compile — should create edition with status 'compiled'
+    const compileRes = await post(
+      "/api/editor/compile",
+      {},
+      { "x-editor-key": "dev-editor-key-change-in-prod" }
+    );
+    ok("compile responds 200", compileRes.status === 200);
+    testEditionId = compileRes.body?.edition?.id ?? null;
+
+    if (testEditionId) {
+      const edResult = await db.execute({
+        sql: "SELECT status FROM editions WHERE id = ?",
+        args: [testEditionId],
+      });
+      const status = (edResult.rows[0] as unknown as { status: string })?.status;
+      ok("edition status after compile is 'compiled'", status === "compiled");
+
+      // Publish — should transition to 'published'
+      const pubRes = await post(
+        "/api/editor/publish",
+        {},
+        { "x-editor-key": "dev-editor-key-change-in-prod" }
+      );
+      ok("publish responds 200", pubRes.status === 200);
+
+      const edResult2 = await db.execute({
+        sql: "SELECT status FROM editions WHERE id = ?",
+        args: [testEditionId],
+      });
+      const status2 = (edResult2.rows[0] as unknown as { status: string })?.status;
+      ok("edition status after publish is 'published'", status2 === "published");
+    }
+  } catch (err) {
+    console.error(`  FAIL  status flow error: ${err}`);
+    failed++;
+  } finally {
+    try {
+      if (testEditionId) {
+        await db.execute({ sql: "DELETE FROM edition_signals WHERE edition_id = ?", args: [testEditionId] });
+        await db.execute({ sql: "DELETE FROM ledger WHERE edition_id = ?", args: [testEditionId] });
+        await db.execute({ sql: "DELETE FROM editions WHERE id = ?", args: [testEditionId] });
+      }
+      if (testSignalId) {
+        await db.execute({ sql: "DELETE FROM signals WHERE id = ?", args: [testSignalId] });
+      }
+    } catch (cleanErr) {
+      console.error(`  FAIL  status flow cleanup error: ${cleanErr}`);
+      failed++;
+    }
+  }
+}
+
+async function testX402Paywall() {
+  console.log("\n[18] x402 paywall on /api/editions/latest");
+
+  // Without payment header — should get 402
+  const { status: noPayStatus } = await get("/api/editions/latest");
+  ok("no-payment request gets 402", noPayStatus === 402);
+
+  // Check financials includes payment fields
+  const { body: fin } = await get("/api/financials");
+  ok("financials has paymentRevenueCents", typeof fin?.paymentRevenueCents === "number");
+  ok("financials has paymentCount", typeof fin?.paymentCount === "number");
+}
+
 async function testErrorHandling() {
   console.log("\n[15] Error handling tests");
 
@@ -420,6 +628,9 @@ async function main() {
   await testEditorPipeline();
   await testSubscribeAndPublishFlow();
   await testErrorHandling();
+  await testPublishRetryIdempotency();
+  await testEditionStatusFlow();
+  await testX402Paywall();
 
   console.log(`\n${"─".repeat(40)}`);
   console.log(`Results: ${passed} passed, ${failed} failed`);

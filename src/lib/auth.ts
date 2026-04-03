@@ -1,17 +1,11 @@
 import { verifyMessage } from "viem";
 import { createHash } from "crypto";
 import { NextRequest } from "next/server";
+import { getDb, schema } from "./db";
+import { eq, lt } from "drizzle-orm";
 
-// In-memory nonce replay window (10 minutes)
-const usedNonces = new Map<string, number>();
-
-// Clean expired nonces every 5 minutes
-setInterval(() => {
-  const cutoff = Date.now() - 10 * 60 * 1000;
-  for (const [nonce, ts] of usedNonces) {
-    if (ts < cutoff) usedNonces.delete(nonce);
-  }
-}, 5 * 60 * 1000);
+const NONCE_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
+const TIMESTAMP_WINDOW_S = 300; // 5 minutes
 
 export interface AuthResult {
   valid: boolean;
@@ -33,6 +27,38 @@ function parseCAIP10(accountId: string): {
   return { chainId, address };
 }
 
+async function isNonceUsed(nonce: string): Promise<boolean> {
+  const db = await getDb();
+  const row = await db
+    .select({ nonce: schema.nonces.nonce })
+    .from(schema.nonces)
+    .where(eq(schema.nonces.nonce, nonce))
+    .get();
+  return !!row;
+}
+
+async function recordNonce(nonce: string): Promise<void> {
+  const db = await getDb();
+  await db
+    .insert(schema.nonces)
+    .values({ nonce, usedAt: Date.now() })
+    .run();
+}
+
+async function cleanExpiredNonces(): Promise<void> {
+  const db = await getDb();
+  const cutoff = Date.now() - NONCE_WINDOW_MS;
+  await db
+    .delete(schema.nonces)
+    .where(lt(schema.nonces.usedAt, cutoff))
+    .run();
+}
+
+// Clean expired nonces every 5 minutes
+setInterval(() => {
+  cleanExpiredNonces().catch(() => {});
+}, 5 * 60 * 1000);
+
 export async function verifyOWSSignature(
   req: NextRequest,
   body?: string
@@ -50,15 +76,15 @@ export async function verifyOWSSignature(
   // Check timestamp within 5 minutes
   const ts = parseInt(timestamp, 10);
   const now = Math.floor(Date.now() / 1000);
-  if (Math.abs(now - ts) > 300) {
+  if (Math.abs(now - ts) > TIMESTAMP_WINDOW_S) {
     return { valid: false, error: "Timestamp expired" };
   }
 
-  // Check nonce replay
-  if (usedNonces.has(nonce)) {
+  // Check nonce replay (DB-backed, survives restarts)
+  if (await isNonceUsed(nonce)) {
     return { valid: false, error: "Nonce already used" };
   }
-  usedNonces.set(nonce, Date.now());
+  await recordNonce(nonce);
 
   // Parse CAIP-10 account ID
   const parsed = parseCAIP10(accountId);

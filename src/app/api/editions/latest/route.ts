@@ -2,9 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDb, schema } from "@/lib/db";
 import { eq, sql } from "drizzle-orm";
 import { withEditionPaywall } from "@/lib/x402";
+import { EDITION_PRICE_CENTS } from "@/lib/constants";
+import { NETWORK } from "@/lib/x402";
+import { recordPayment } from "@/lib/payments";
 
 async function handler(req: NextRequest): Promise<NextResponse> {
-  void req;
   const db = await getDb();
 
   const edition = await db
@@ -32,11 +34,41 @@ async function handler(req: NextRequest): Promise<NextResponse> {
       agentAddress: schema.agents.address,
     })
     .from(schema.editionSignals)
-    .leftJoin(schema.signals, eq(schema.editionSignals.signalId, schema.signals.id))
+    .leftJoin(
+      schema.signals,
+      eq(schema.editionSignals.signalId, schema.signals.id)
+    )
     .leftJoin(schema.agents, eq(schema.signals.agentId, schema.agents.id))
     .where(eq(schema.editionSignals.editionId, edition.id))
     .orderBy(schema.editionSignals.position)
     .all();
+
+  // If this request passed through the x402 paywall, record the payment.
+  // The payment-signature header is present when x402 verified a payment.
+  const paymentHeader =
+    req.headers.get("payment-signature") || req.headers.get("x-payment");
+
+  if (paymentHeader) {
+    // Extract payer from the payment payload (best-effort)
+    let payerAddress = "unknown";
+    try {
+      const decoded = JSON.parse(
+        Buffer.from(paymentHeader, "base64").toString()
+      );
+      payerAddress = decoded?.payload?.authorization?.from ?? "unknown";
+    } catch {
+      // If we can't decode, still record with unknown payer
+    }
+
+    await recordPayment({
+      editionId: edition.id,
+      payerAddress,
+      amountCents: EDITION_PRICE_CENTS,
+      network: NETWORK,
+    }).catch(() => {
+      // Don't fail the response if payment recording fails
+    });
+  }
 
   return NextResponse.json({ edition, signals: includedSignals });
 }

@@ -96,6 +96,7 @@ export async function POST(req: NextRequest) {
       revenueCents: estimatedRevenueCents,
       publishedAt: now,
       createdAt: now,
+      status: "compiled",
     })
     .run();
 

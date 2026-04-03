@@ -46,6 +46,7 @@ export const editions = sqliteTable("editions", {
   publishedAt: text("published_at").notNull(),
   createdAt: text("created_at").notNull(),
   emailedAt: text("emailed_at"),
+  status: text("status").default("compiled").notNull(), // compiled | published | delivery_failed
 });
 
 export const editionSignals = sqliteTable(
@@ -81,4 +82,33 @@ export const ledger = sqliteTable("ledger", {
   txHash: text("tx_hash"),
   editionId: text("edition_id").references(() => editions.id),
   createdAt: text("created_at").notNull(),
+});
+
+export const payments = sqliteTable("payments", {
+  id: text("id").primaryKey(),
+  editionId: text("edition_id")
+    .notNull()
+    .references(() => editions.id),
+  payerAddress: text("payer_address").notNull(),
+  amountCents: integer("amount_cents").notNull(),
+  txHash: text("tx_hash"),
+  network: text("network").notNull(),
+  paidAt: text("paid_at").notNull(),
+});
+
+export const entitlements = sqliteTable("entitlements", {
+  id: text("id").primaryKey(),
+  paymentId: text("payment_id")
+    .notNull()
+    .references(() => payments.id),
+  editionId: text("edition_id")
+    .notNull()
+    .references(() => editions.id),
+  accountId: text("account_id").notNull(),
+  grantedAt: text("granted_at").notNull(),
+});
+
+export const nonces = sqliteTable("nonces", {
+  nonce: text("nonce").primaryKey(),
+  usedAt: integer("used_at").notNull(),
 });

@@ -26,8 +26,8 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Idempotency: if already emailed, return cached result without re-sending
-  if (edition.emailedAt) {
+  // Idempotency: if already published, return cached result
+  if (edition.status === "published") {
     return NextResponse.json({
       message: `Edition #${edition.number} already published`,
       emailsSent: 0,
@@ -44,13 +44,29 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  // Record publication event in ledger
-  await recordLedgerEntry({
-    type: "expense",
-    amountCents: 0,
-    description: `Published Edition #${edition.number} — ${edition.signalCount} signals distributed`,
-    editionId: edition.id,
-  });
+  // Only compiled or delivery_failed editions can be published
+  if (edition.status !== "compiled" && edition.status !== "delivery_failed") {
+    return NextResponse.json(
+      { error: `Edition #${edition.number} is in '${edition.status}' state, expected 'compiled' or 'delivery_failed'` },
+      { status: 409 }
+    );
+  }
+
+  // Record publication event in ledger (check for existing to prevent duplicates)
+  const existingLedger = await db
+    .select({ id: schema.ledger.id })
+    .from(schema.ledger)
+    .where(eq(schema.ledger.editionId, edition.id))
+    .get();
+
+  if (!existingLedger) {
+    await recordLedgerEntry({
+      type: "expense",
+      amountCents: 0,
+      description: `Published Edition #${edition.number} — ${edition.signalCount} signals distributed`,
+      editionId: edition.id,
+    });
+  }
 
   // Refresh revenue estimate based on current subscriber count
   const subCount =
@@ -62,9 +78,9 @@ export async function POST(req: NextRequest) {
 
   const estimatedRevenueCents = subCount * edition.priceCents;
 
-  // Update revenue estimate
   if (edition.revenueCents !== estimatedRevenueCents) {
-    await db.update(schema.editions)
+    await db
+      .update(schema.editions)
       .set({ revenueCents: estimatedRevenueCents })
       .where(eq(schema.editions.id, edition.id))
       .run();
@@ -83,7 +99,8 @@ export async function POST(req: NextRequest) {
       .where(eq(schema.subscribers.active, 1))
       .all();
 
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+    const baseUrl =
+      process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
 
     for (const sub of subscribers) {
       try {
@@ -111,25 +128,36 @@ export async function POST(req: NextRequest) {
         });
         emailsSent++;
       } catch (err) {
-        emailErrors.push(`${sub.email}: ${err instanceof Error ? err.message : "Unknown error"}`);
+        emailErrors.push(
+          `${sub.email}: ${err instanceof Error ? err.message : "Unknown error"}`
+        );
       }
     }
   }
 
-  // Mark as emailed only after delivery completes (not before)
-  // This ensures retries work if the request crashes mid-send
-  if (emailsSent > 0) {
-    await db.update(schema.editions)
-      .set({ emailedAt: new Date().toISOString() })
-      .where(eq(schema.editions.id, edition.id))
-      .run();
-  }
+  // Determine final status
+  // Any email failure → delivery_failed so operator can retry for missed recipients
+  const hasEmailFailures = emailErrors.length > 0 && process.env.RESEND_API_KEY;
+  const finalStatus = hasEmailFailures ? "delivery_failed" : "published";
+
+  // Always mark status — prevents duplicate work on retry
+  await db
+    .update(schema.editions)
+    .set({
+      status: finalStatus,
+      ...(emailsSent > 0
+        ? { emailedAt: new Date().toISOString() }
+        : {}),
+    })
+    .where(eq(schema.editions.id, edition.id))
+    .run();
 
   return NextResponse.json({
-    message: `Edition #${edition.number} published`,
+    message: `Edition #${edition.number} ${finalStatus === "published" ? "published" : "publish failed — emails not delivered"}`,
     emailsSent,
     subscriberCount: subCount,
     estimatedRevenueCents,
+    status: finalStatus,
     ...(emailErrors.length > 0 ? { emailErrors } : {}),
     edition: {
       id: edition.id,
