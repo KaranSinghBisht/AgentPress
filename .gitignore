@@ -2,6 +2,8 @@
 
 # dependencies
 /node_modules
+mcp/node_modules
+editor/node_modules
 /.pnp
 .pnp.*
 .yarn/*
@@ -30,8 +32,11 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env*
+# env files
+.env.local
+.env*.local
+.env.production
+!.env.example
 
 # vercel
 .vercel
@@ -39,3 +44,14 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# database
+agentpress.db
+agentpress.db-shm
+agentpress.db-wal
+
+# omc state
+.omc/
+
+# video assets (too large for git)
+public/hero-bg.mp4
