@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
   const estimatedRevenueCents = subCount * EDITION_PRICE_CENTS;
 
   // Compile the edition
-  const compiled = compileEdition({
+  const compiled = await compileEdition({
     editionNumber,
     signals: included.map((s) => ({
       headline: s.headline,

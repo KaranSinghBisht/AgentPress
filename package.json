@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@libsql/client": "^0.17.2",
+    "@moonpay/cli": "^1.23.1",
     "@open-wallet-standard/core": "^1.2.0",
     "@x402/evm": "^2.9.0",
     "@x402/next": "^2.9.0",

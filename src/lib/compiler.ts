@@ -1,5 +1,6 @@
 import { BEAT_LABELS, BEAT_COLORS, REVENUE_SPLIT } from "./constants";
 import type { Beat } from "./constants";
+import { getTrendingTokens, formatMarketSnapshotHtml, formatMarketSnapshotText } from "./moonpay";
 
 interface CompiledSignal {
   headline: string;
@@ -19,7 +20,7 @@ interface CompileInput {
   totalRevenueCents: number;
 }
 
-export function compileEdition(input: CompileInput) {
+export async function compileEdition(input: CompileInput) {
   const { editionNumber, signals, totalRevenueCents } = input;
   const beats = [...new Set(signals.map((s) => s.beat))];
   const topSignal = signals[0];
@@ -38,8 +39,13 @@ export function compileEdition(input: CompileInput) {
     ? Math.floor(contributorPayout / signals.length)
     : 0;
 
-  const contentHtml = buildHtml(editionNumber, title, summary, signals);
-  const contentText = buildText(editionNumber, title, summary, signals);
+  // Fetch market data via MoonPay CLI
+  const trending = await getTrendingTokens("ethereum", 5);
+  const marketHtml = formatMarketSnapshotHtml(trending);
+  const marketText = formatMarketSnapshotText(trending);
+
+  const contentHtml = buildHtml(editionNumber, title, summary, signals) + marketHtml;
+  const contentText = buildText(editionNumber, title, summary, signals) + marketText;
 
   return {
     title,
