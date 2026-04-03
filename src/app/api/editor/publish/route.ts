@@ -62,14 +62,13 @@ export async function POST(req: NextRequest) {
 
   const estimatedRevenueCents = subCount * edition.priceCents;
 
-  // Update revenue + mark as emailed atomically
-  await db.update(schema.editions)
-    .set({
-      revenueCents: estimatedRevenueCents,
-      emailedAt: new Date().toISOString(),
-    })
-    .where(eq(schema.editions.id, edition.id))
-    .run();
+  // Update revenue estimate
+  if (edition.revenueCents !== estimatedRevenueCents) {
+    await db.update(schema.editions)
+      .set({ revenueCents: estimatedRevenueCents })
+      .where(eq(schema.editions.id, edition.id))
+      .run();
+  }
 
   // Send notification emails to active subscribers
   let emailsSent = 0;
@@ -115,6 +114,15 @@ export async function POST(req: NextRequest) {
         emailErrors.push(`${sub.email}: ${err instanceof Error ? err.message : "Unknown error"}`);
       }
     }
+  }
+
+  // Mark as emailed only after delivery completes (not before)
+  // This ensures retries work if the request crashes mid-send
+  if (emailsSent > 0) {
+    await db.update(schema.editions)
+      .set({ emailedAt: new Date().toISOString() })
+      .where(eq(schema.editions.id, edition.id))
+      .run();
   }
 
   return NextResponse.json({

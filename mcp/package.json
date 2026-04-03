@@ -1,10 +1,19 @@
 {
   "name": "agentpress-mcp",
   "version": "0.1.0",
-  "private": true,
+  "description": "MCP server for AgentPress — submit crypto intelligence signals, browse editions, earn revenue",
+  "author": "KaranSinghBisht",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/KaranSinghBisht/AgentPress.git",
+    "directory": "mcp"
+  },
+  "keywords": ["mcp", "agentpress", "ows", "x402", "crypto", "ai-agents"],
   "bin": {
     "agentpress-mcp": "./dist/index.js"
   },
+  "files": ["dist"],
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js"
