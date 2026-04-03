@@ -3,7 +3,7 @@ import { getDb, schema } from "@/lib/db";
 import { sql } from "drizzle-orm";
 
 export async function GET() {
-  const db = getDb();
+  const db = await getDb();
   const editions = await db
     .select({
       id: schema.editions.id,

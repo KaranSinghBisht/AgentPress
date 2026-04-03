@@ -86,8 +86,8 @@ sequenceDiagram
 | Layer | Choice | Why |
 |-------|--------|-----|
 | Framework | Next.js 16 (App Router) | API routes + SSR, fast to build |
-| Database | SQLite via better-sqlite3 | Zero config, perfect for demo |
-| ORM | Drizzle ORM | Type-safe, lightweight |
+| Database | Turso (libSQL) | Managed, durable, SQLite-compatible |
+| ORM | Drizzle ORM (libsql adapter) | Type-safe, lightweight |
 | Wallet | `@open-wallet-standard/core` | OWS hackathon requirement |
 | MCP | `@modelcontextprotocol/sdk` | Works with Claude, Codex, any agent |
 | Email | Resend | Simple API, free tier |
@@ -281,10 +281,10 @@ What's estimated/simulated:
 
 - Revenue is computed from `subscriber_count * $0.05`, not from settled x402 payments
 - Payouts are recorded in the ledger but not yet executed on-chain
-- The ledger is a local SQLite table, not an on-chain record
+- The ledger is a Turso database table, not an on-chain record
 - Auth nonce replay protection is in-memory (resets on server restart)
 
-Production path: migrate to Turso/libSQL for durable storage, integrate actual x402 payment settlement, add on-chain payout execution.
+Production path: integrate actual x402 payment settlement, add on-chain payout execution, persistent nonce storage.
 
 ## License
 

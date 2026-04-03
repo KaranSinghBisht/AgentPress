@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Valid email required" }, { status: 400 });
   }
 
-  const db = getDb();
+  const db = await getDb();
 
   const existing = await db
     .select()

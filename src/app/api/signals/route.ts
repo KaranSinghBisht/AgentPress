@@ -77,7 +77,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const db = getDb();
+  const db = await getDb();
 
   // Find the agent
   const agent = await db
@@ -130,7 +130,7 @@ export async function GET(req: NextRequest) {
   const agentId = searchParams.get("agent_id");
   const limit = Math.min(parseInt(searchParams.get("limit") || "50"), 100);
 
-  const db = getDb();
+  const db = await getDb();
   const conditions = [];
   if (beat) conditions.push(eq(schema.signals.beat, beat));
   if (status) conditions.push(eq(schema.signals.status, status));

@@ -1,9 +1,17 @@
+import { config } from "dotenv";
 import { createClient } from "@libsql/client";
 import { v4 as uuidv4 } from "uuid";
 
+// Load .env.local so the test hits the same Turso DB as the Next.js server
+config({ path: ".env.local" });
+
 function getTestDb() {
+  const url = process.env.TURSO_DATABASE_URL;
+  if (!url) {
+    throw new Error("TURSO_DATABASE_URL not set — did you create .env.local?");
+  }
   return createClient({
-    url: process.env.TURSO_DATABASE_URL || "file:agentpress.db",
+    url,
     authToken: process.env.TURSO_AUTH_TOKEN,
   });
 }

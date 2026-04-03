@@ -8,7 +8,7 @@ export async function GET(
 ) {
   void req;
   const { id } = await params;
-  const db = getDb();
+  const db = await getDb();
 
   const edition = await db
     .select()

@@ -2,8 +2,8 @@ import { createClient } from "@libsql/client";
 import { drizzle } from "drizzle-orm/libsql";
 import * as schema from "./schema";
 
-let _db: ReturnType<typeof createDb> | null = null;
-let _migrationsRun = false;
+let _db: ReturnType<typeof drizzle<typeof schema>> | null = null;
+let _migrationsPromise: Promise<void> | null = null;
 
 function createDb() {
   const client = createClient({
@@ -13,12 +13,13 @@ function createDb() {
 
   const db = drizzle(client, { schema });
 
-  return { db, client };
+  // Start migrations immediately, store the promise
+  _migrationsPromise = runMigrations(client);
+
+  return db;
 }
 
 async function runMigrations(client: ReturnType<typeof createClient>) {
-  if (_migrationsRun) return;
-
   await client.executeMultiple(`
     CREATE TABLE IF NOT EXISTS agents (
       id TEXT PRIMARY KEY,
@@ -62,7 +63,8 @@ async function runMigrations(client: ReturnType<typeof createClient>) {
       cost_cents INTEGER DEFAULT 0 NOT NULL,
       revenue_cents INTEGER DEFAULT 0 NOT NULL,
       published_at TEXT NOT NULL,
-      created_at TEXT NOT NULL
+      created_at TEXT NOT NULL,
+      emailed_at TEXT
     );
 
     CREATE TABLE IF NOT EXISTS edition_signals (
@@ -99,19 +101,18 @@ async function runMigrations(client: ReturnType<typeof createClient>) {
     CREATE INDEX IF NOT EXISTS idx_ledger_type ON ledger(type);
     CREATE INDEX IF NOT EXISTS idx_ledger_edition ON ledger(edition_id);
   `);
-
-  _migrationsRun = true;
 }
 
-export function getDb() {
+export async function getDb() {
   if (!_db) {
     _db = createDb();
-    // Fire-and-forget migrations on first access
-    runMigrations(_db.client).catch((err) => {
-      throw new Error(`Migration failed: ${err}`);
-    });
   }
-  return _db.db;
+  // Always await migrations before returning — no race condition
+  if (_migrationsPromise) {
+    await _migrationsPromise;
+    _migrationsPromise = null;
+  }
+  return _db;
 }
 
 export { schema };

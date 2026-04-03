@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const db = getDb();
+  const db = await getDb();
 
   const edition = await db
     .select()
@@ -24,6 +24,24 @@ export async function POST(req: NextRequest) {
       { error: "No editions to publish. Run /api/editor/compile first." },
       { status: 400 }
     );
+  }
+
+  // Idempotency: if already emailed, return cached result without re-sending
+  if (edition.emailedAt) {
+    return NextResponse.json({
+      message: `Edition #${edition.number} already published`,
+      emailsSent: 0,
+      subscriberCount: 0,
+      estimatedRevenueCents: edition.revenueCents,
+      alreadyPublished: true,
+      edition: {
+        id: edition.id,
+        number: edition.number,
+        title: edition.title,
+        signalCount: edition.signalCount,
+        url: `/editions/${edition.id}`,
+      },
+    });
   }
 
   // Record publication event in ledger
@@ -44,12 +62,14 @@ export async function POST(req: NextRequest) {
 
   const estimatedRevenueCents = subCount * edition.priceCents;
 
-  if (edition.revenueCents !== estimatedRevenueCents) {
-    await db.update(schema.editions)
-      .set({ revenueCents: estimatedRevenueCents })
-      .where(eq(schema.editions.id, edition.id))
-      .run();
-  }
+  // Update revenue + mark as emailed atomically
+  await db.update(schema.editions)
+    .set({
+      revenueCents: estimatedRevenueCents,
+      emailedAt: new Date().toISOString(),
+    })
+    .where(eq(schema.editions.id, edition.id))
+    .run();
 
   // Send notification emails to active subscribers
   let emailsSent = 0;

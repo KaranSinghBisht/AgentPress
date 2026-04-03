@@ -45,6 +45,7 @@ export const editions = sqliteTable("editions", {
   revenueCents: integer("revenue_cents").default(0).notNull(),
   publishedAt: text("published_at").notNull(),
   createdAt: text("created_at").notNull(),
+  emailedAt: text("emailed_at"),
 });
 
 export const editionSignals = sqliteTable(

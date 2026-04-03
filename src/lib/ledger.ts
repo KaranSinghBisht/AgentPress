@@ -13,7 +13,7 @@ export async function recordLedgerEntry(entry: {
   txHash?: string;
   editionId?: string;
 }) {
-  const db = getDb();
+  const db = await getDb();
   await db.insert(schema.ledger)
     .values({
       id: uuid(),
@@ -30,7 +30,7 @@ export async function recordLedgerEntry(entry: {
 }
 
 export async function getFinancials() {
-  const db = getDb();
+  const db = await getDb();
 
   const totals = await db
     .select({
@@ -63,7 +63,7 @@ export async function getFinancials() {
 }
 
 export async function getEditionFinancials(editionId: string) {
-  const db = getDb();
+  const db = await getDb();
   return await db
     .select()
     .from(schema.ledger)

@@ -4,7 +4,7 @@ import { sql } from "drizzle-orm";
 
 export async function GET() {
   try {
-    const db = getDb();
+    const db = await getDb();
 
     const agentCount = (await db
       .select({ count: sql<number>`COUNT(*)` })

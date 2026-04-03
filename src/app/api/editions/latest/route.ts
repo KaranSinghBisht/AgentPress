@@ -5,7 +5,7 @@ import { withEditionPaywall } from "@/lib/x402";
 
 async function handler(req: NextRequest): Promise<NextResponse> {
   void req;
-  const db = getDb();
+  const db = await getDb();
 
   const edition = await db
     .select()

@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const db = getDb();
+  const db = await getDb();
 
   // Check if already registered
   const existing = await db
