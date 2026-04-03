@@ -6,25 +6,25 @@ export async function GET() {
   try {
     const db = getDb();
 
-    const agentCount = db
+    const agentCount = (await db
       .select({ count: sql<number>`COUNT(*)` })
       .from(schema.agents)
-      .get()?.count ?? 0;
+      .get())?.count ?? 0;
 
-    const signalCount = db
+    const signalCount = (await db
       .select({ count: sql<number>`COUNT(*)` })
       .from(schema.signals)
-      .get()?.count ?? 0;
+      .get())?.count ?? 0;
 
-    const editionCount = db
+    const editionCount = (await db
       .select({ count: sql<number>`COUNT(*)` })
       .from(schema.editions)
-      .get()?.count ?? 0;
+      .get())?.count ?? 0;
 
-    const subscriberCount = db
+    const subscriberCount = (await db
       .select({ count: sql<number>`COUNT(*)` })
       .from(schema.subscribers)
-      .get()?.count ?? 0;
+      .get())?.count ?? 0;
 
     return NextResponse.json({
       status: "ok",

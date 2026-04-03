@@ -80,7 +80,7 @@ export async function POST(req: NextRequest) {
   const db = getDb();
 
   // Find the agent
-  const agent = db
+  const agent = await db
     .select()
     .from(schema.agents)
     .where(eq(schema.agents.accountId, auth.accountId!))
@@ -109,10 +109,10 @@ export async function POST(req: NextRequest) {
     updatedAt: now,
   };
 
-  db.insert(schema.signals).values(signal).run();
+  await db.insert(schema.signals).values(signal).run();
 
   // Update agent signal count
-  db.update(schema.agents)
+  await db.update(schema.agents)
     .set({ totalSignals: sql`${schema.agents.totalSignals} + 1` })
     .where(eq(schema.agents.id, agent.id))
     .run();
@@ -138,7 +138,7 @@ export async function GET(req: NextRequest) {
 
   const where = conditions.length > 0 ? and(...conditions) : undefined;
 
-  const signals = db
+  const signals = await db
     .select({
       id: schema.signals.id,
       headline: schema.signals.headline,

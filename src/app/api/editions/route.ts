@@ -4,7 +4,7 @@ import { sql } from "drizzle-orm";
 
 export async function GET() {
   const db = getDb();
-  const editions = db
+  const editions = await db
     .select({
       id: schema.editions.id,
       number: schema.editions.number,

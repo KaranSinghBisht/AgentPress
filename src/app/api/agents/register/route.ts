@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
   const db = getDb();
 
   // Check if already registered
-  const existing = db
+  const existing = await db
     .select()
     .from(schema.agents)
     .where(eq(schema.agents.accountId, auth.accountId!))
@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
     longestStreak: 0,
   };
 
-  db.insert(schema.agents).values(agent).run();
+  await db.insert(schema.agents).values(agent).run();
 
   return NextResponse.json({ agent, message: "Registered successfully" }, { status: 201 });
 }

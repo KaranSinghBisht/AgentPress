@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
   const db = getDb();
 
   // Get all submitted signals
-  const submitted = db
+  const submitted = await db
     .select({
       id: schema.signals.id,
       headline: schema.signals.headline,
@@ -73,7 +73,7 @@ export async function POST(req: NextRequest) {
         ? `Included (rank #${i + 1}, score ${s.score.toFixed(1)})`
         : `Not included (score ${s.score.toFixed(1)})`;
 
-    db.update(schema.signals)
+    await db.update(schema.signals)
       .set({
         status,
         score: s.score,

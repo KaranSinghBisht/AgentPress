@@ -4,7 +4,7 @@ import { sql } from "drizzle-orm";
 
 export async function GET() {
   const db = getDb();
-  const agents = db
+  const agents = await db
     .select()
     .from(schema.agents)
     .orderBy(sql`${schema.agents.signalsIncluded} DESC`)

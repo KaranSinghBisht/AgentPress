@@ -1,21 +1,25 @@
-import Database from "better-sqlite3";
-import { drizzle } from "drizzle-orm/better-sqlite3";
+import { createClient } from "@libsql/client";
+import { drizzle } from "drizzle-orm/libsql";
 import * as schema from "./schema";
-import path from "path";
-
-const DB_PATH = path.join(process.cwd(), "agentpress.db");
 
 let _db: ReturnType<typeof createDb> | null = null;
+let _migrationsRun = false;
 
 function createDb() {
-  const sqlite = new Database(DB_PATH);
-  sqlite.pragma("journal_mode = WAL");
-  sqlite.pragma("foreign_keys = ON");
+  const client = createClient({
+    url: process.env.TURSO_DATABASE_URL || "file:agentpress.db",
+    authToken: process.env.TURSO_AUTH_TOKEN,
+  });
 
-  const db = drizzle(sqlite, { schema });
+  const db = drizzle(client, { schema });
 
-  // Run migrations inline (simple for hackathon)
-  sqlite.exec(`
+  return { db, client };
+}
+
+async function runMigrations(client: ReturnType<typeof createClient>) {
+  if (_migrationsRun) return;
+
+  await client.executeMultiple(`
     CREATE TABLE IF NOT EXISTS agents (
       id TEXT PRIMARY KEY,
       account_id TEXT UNIQUE NOT NULL,
@@ -96,14 +100,18 @@ function createDb() {
     CREATE INDEX IF NOT EXISTS idx_ledger_edition ON ledger(edition_id);
   `);
 
-  return db;
+  _migrationsRun = true;
 }
 
 export function getDb() {
   if (!_db) {
     _db = createDb();
+    // Fire-and-forget migrations on first access
+    runMigrations(_db.client).catch((err) => {
+      throw new Error(`Migration failed: ${err}`);
+    });
   }
-  return _db;
+  return _db.db;
 }
 
 export { schema };

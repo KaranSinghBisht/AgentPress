@@ -10,7 +10,7 @@ export async function GET(
   const { id } = await params;
   const db = getDb();
 
-  const edition = db
+  const edition = await db
     .select()
     .from(schema.editions)
     .where(eq(schema.editions.id, id))
@@ -20,7 +20,7 @@ export async function GET(
     return NextResponse.json({ error: "Edition not found" }, { status: 404 });
   }
 
-  const includedSignals = db
+  const includedSignals = await db
     .select({
       position: schema.editionSignals.position,
       payoutCents: schema.editionSignals.payoutCents,

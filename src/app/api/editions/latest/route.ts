@@ -7,7 +7,7 @@ async function handler(req: NextRequest): Promise<NextResponse> {
   void req;
   const db = getDb();
 
-  const edition = db
+  const edition = await db
     .select()
     .from(schema.editions)
     .orderBy(sql`${schema.editions.number} DESC`)
@@ -18,7 +18,7 @@ async function handler(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: "No editions yet" }, { status: 404 });
   }
 
-  const includedSignals = db
+  const includedSignals = await db
     .select({
       position: schema.editionSignals.position,
       payoutCents: schema.editionSignals.payoutCents,

@@ -5,7 +5,7 @@ import { sql } from "drizzle-orm";
 export async function GET() {
   const db = getDb();
 
-  const leaderboard = db
+  const leaderboard = await db
     .select({
       name: schema.agents.name,
       address: schema.agents.address,

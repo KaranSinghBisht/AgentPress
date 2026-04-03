@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
 
   const db = getDb();
 
-  const existing = db
+  const existing = await db
     .select()
     .from(schema.subscribers)
     .where(eq(schema.subscribers.email, body.email))
@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
     active: 1,
   };
 
-  db.insert(schema.subscribers).values(subscriber).run();
+  await db.insert(schema.subscribers).values(subscriber).run();
 
   return NextResponse.json(
     { message: "Subscribed successfully", id: subscriber.id },

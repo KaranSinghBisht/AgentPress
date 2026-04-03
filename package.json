@@ -12,10 +12,10 @@
     "test:e2e": "npx tsx scripts/e2e-test.ts"
   },
   "dependencies": {
+    "@libsql/client": "^0.17.2",
     "@open-wallet-standard/core": "^1.2.0",
     "@x402/evm": "^2.9.0",
     "@x402/next": "^2.9.0",
-    "better-sqlite3": "^12.8.0",
     "drizzle-orm": "^0.45.2",
     "framer-motion": "^12.38.0",
     "next": "16.2.2",
@@ -27,7 +27,6 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
-    "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

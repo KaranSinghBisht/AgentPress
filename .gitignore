@@ -55,3 +55,7 @@ agentpress.db-wal
 
 # video assets (too large for git)
 public/hero-bg.mp4
+
+AGENTS.md
+CLAUDE.md
+PLAN.md

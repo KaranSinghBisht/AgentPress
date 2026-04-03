@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
 
   const db = getDb();
 
-  const edition = db
+  const edition = await db
     .select()
     .from(schema.editions)
     .orderBy(sql`${schema.editions.number} DESC`)
@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
   }
 
   // Record publication event in ledger
-  recordLedgerEntry({
+  await recordLedgerEntry({
     type: "expense",
     amountCents: 0,
     description: `Published Edition #${edition.number} — ${edition.signalCount} signals distributed`,
@@ -36,16 +36,16 @@ export async function POST(req: NextRequest) {
 
   // Refresh revenue estimate based on current subscriber count
   const subCount =
-    db
+    (await db
       .select({ count: sql<number>`COUNT(*)` })
       .from(schema.subscribers)
       .where(eq(schema.subscribers.active, 1))
-      .get()?.count ?? 0;
+      .get())?.count ?? 0;
 
   const estimatedRevenueCents = subCount * edition.priceCents;
 
   if (edition.revenueCents !== estimatedRevenueCents) {
-    db.update(schema.editions)
+    await db.update(schema.editions)
       .set({ revenueCents: estimatedRevenueCents })
       .where(eq(schema.editions.id, edition.id))
       .run();
@@ -58,7 +58,7 @@ export async function POST(req: NextRequest) {
   if (process.env.RESEND_API_KEY) {
     const resend = new Resend(process.env.RESEND_API_KEY);
 
-    const subscribers = db
+    const subscribers = await db
       .select()
       .from(schema.subscribers)
       .where(eq(schema.subscribers.active, 1))

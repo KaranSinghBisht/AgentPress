@@ -1,6 +1,12 @@
-import Database from "better-sqlite3";
-import path from "path";
+import { createClient } from "@libsql/client";
 import { v4 as uuidv4 } from "uuid";
+
+function getTestDb() {
+  return createClient({
+    url: process.env.TURSO_DATABASE_URL || "file:agentpress.db",
+    authToken: process.env.TURSO_AUTH_TOKEN,
+  });
+}
 
 const BASE_URL = "http://localhost:3000";
 const TEST_EMAIL = `e2e-test-${Date.now()}@agentpress-test.invalid`;
@@ -177,34 +183,27 @@ async function testFinancialsDeep() {
 async function testEditorPipeline() {
   console.log("\n[13] Full editor pipeline (DB-seeded signal)");
 
-  const dbPath = path.join(process.cwd(), "agentpress.db");
-  let sqlite: InstanceType<typeof Database> | null = null;
+  const db = getTestDb();
   let testSignalId: string | null = null;
   let testEditionId: string | null = null;
 
   try {
-    sqlite = new Database(dbPath);
-
     // Need a real agent to satisfy FK constraint
-    const agent = sqlite
-      .prepare("SELECT id FROM agents LIMIT 1")
-      .get() as { id: string } | undefined;
+    const agentResult = await db.execute("SELECT id FROM agents LIMIT 1");
+    const agent = agentResult.rows[0] as unknown as { id: string } | undefined;
 
     if (!agent) {
       console.log("  SKIP  no agents in DB — cannot seed test signal");
-      sqlite.close();
       return;
     }
 
     // Insert fresh test signal with status "submitted"
     testSignalId = uuidv4();
     const now = new Date().toISOString();
-    sqlite
-      .prepare(
-        `INSERT INTO signals (id, agent_id, headline, body, sources, tags, beat, status, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, 'submitted', ?, ?)`
-      )
-      .run(
+    await db.execute({
+      sql: `INSERT INTO signals (id, agent_id, headline, body, sources, tags, beat, status, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, 'submitted', ?, ?)`,
+      args: [
         testSignalId,
         agent.id,
         "E2E Test Signal — pipeline smoke test",
@@ -213,8 +212,9 @@ async function testEditorPipeline() {
         JSON.stringify(["e2e", "test"]),
         "technology",
         now,
-        now
-      );
+        now,
+      ],
+    });
     ok("test signal inserted", true);
 
     // POST /api/editor/review
@@ -227,16 +227,18 @@ async function testEditorPipeline() {
     ok("review has reviewed count", typeof reviewRes.body?.reviewed === "number");
     ok("review reviewed >= 1", reviewRes.body?.reviewed >= 1);
 
-    // Signal should now be "included" or "reviewed" — check at least one included exists
-    const includedRow = sqlite
-      .prepare("SELECT id FROM signals WHERE id = ? AND status IN ('included','reviewed')")
-      .get(testSignalId) as { id: string } | undefined;
-    ok("signal status updated after review", includedRow !== undefined);
+    // Signal should now be "included" or "reviewed"
+    const includedResult = await db.execute({
+      sql: "SELECT id FROM signals WHERE id = ? AND status IN ('included','reviewed')",
+      args: [testSignalId],
+    });
+    ok("signal status updated after review", includedResult.rows.length > 0);
 
-    // Force status to "included" so compile can pick it up (in case it landed as "reviewed")
-    sqlite
-      .prepare("UPDATE signals SET status = 'included' WHERE id = ?")
-      .run(testSignalId);
+    // Force status to "included" so compile can pick it up
+    await db.execute({
+      sql: "UPDATE signals SET status = 'included' WHERE id = ?",
+      args: [testSignalId],
+    });
 
     // POST /api/editor/compile
     const compileRes = await post(
@@ -264,30 +266,20 @@ async function testEditorPipeline() {
     console.error(`  FAIL  editor pipeline error: ${err}`);
     failed++;
   } finally {
-    // Cleanup: delete test signal and test edition
-    if (sqlite) {
-      try {
-        if (testEditionId) {
-          sqlite
-            .prepare("DELETE FROM edition_signals WHERE edition_id = ?")
-            .run(testEditionId);
-          sqlite
-            .prepare("DELETE FROM ledger WHERE edition_id = ?")
-            .run(testEditionId);
-          sqlite
-            .prepare("DELETE FROM editions WHERE id = ?")
-            .run(testEditionId);
-          ok("test edition deleted", true);
-        }
-        if (testSignalId) {
-          sqlite.prepare("DELETE FROM signals WHERE id = ?").run(testSignalId);
-          ok("test signal deleted", true);
-        }
-      } catch (cleanErr) {
-        console.error(`  FAIL  pipeline cleanup error: ${cleanErr}`);
-        failed++;
+    try {
+      if (testEditionId) {
+        await db.execute({ sql: "DELETE FROM edition_signals WHERE edition_id = ?", args: [testEditionId] });
+        await db.execute({ sql: "DELETE FROM ledger WHERE edition_id = ?", args: [testEditionId] });
+        await db.execute({ sql: "DELETE FROM editions WHERE id = ?", args: [testEditionId] });
+        ok("test edition deleted", true);
       }
-      sqlite.close();
+      if (testSignalId) {
+        await db.execute({ sql: "DELETE FROM signals WHERE id = ?", args: [testSignalId] });
+        ok("test signal deleted", true);
+      }
+    } catch (cleanErr) {
+      console.error(`  FAIL  pipeline cleanup error: ${cleanErr}`);
+      failed++;
     }
   }
 }
@@ -324,14 +316,10 @@ async function testSubscribeAndPublishFlow() {
   }
 
   // Cleanup subscriber
-  const dbPath = path.join(process.cwd(), "agentpress.db");
   try {
-    const sqlite = new Database(dbPath);
-    const result = sqlite
-      .prepare("DELETE FROM subscribers WHERE email = ?")
-      .run(testSubscriberEmail);
-    sqlite.close();
-    ok("test subscriber deleted", result.changes === 1);
+    const db = getTestDb();
+    const result = await db.execute({ sql: "DELETE FROM subscribers WHERE email = ?", args: [testSubscriberEmail] });
+    ok("test subscriber deleted", result.rowsAffected === 1);
   } catch (err) {
     console.error(`  FAIL  subscriber cleanup error: ${err}`);
     failed++;
@@ -366,14 +354,12 @@ async function testSubscribe(): Promise<string | null> {
   return body?.id ?? null;
 }
 
-function cleanupSubscriber(email: string) {
+async function cleanupSubscriber(email: string) {
   console.log("\n[11] Cleanup — delete test subscriber from DB");
-  const dbPath = path.join(process.cwd(), "agentpress.db");
   try {
-    const sqlite = new Database(dbPath);
-    const result = sqlite.prepare("DELETE FROM subscribers WHERE email = ?").run(email);
-    sqlite.close();
-    ok("test subscriber deleted", result.changes === 1);
+    const db = getTestDb();
+    const result = await db.execute({ sql: "DELETE FROM subscribers WHERE email = ?", args: [email] });
+    ok("test subscriber deleted", result.rowsAffected === 1);
   } catch (err) {
     console.error(`  FAIL  cleanup error: ${err}`);
     failed++;
@@ -415,7 +401,7 @@ async function main() {
   await testLeaderboard();
   await testFinancials();
   await testSubscribe();
-  cleanupSubscriber(TEST_EMAIL);
+  await cleanupSubscriber(TEST_EMAIL);
 
   await testFinancialsDeep();
   await testEditorPipeline();

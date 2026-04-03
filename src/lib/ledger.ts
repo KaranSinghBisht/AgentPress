@@ -4,7 +4,7 @@ import { eq, sql } from "drizzle-orm";
 
 type LedgerType = "revenue" | "expense" | "payout";
 
-export function recordLedgerEntry(entry: {
+export async function recordLedgerEntry(entry: {
   type: LedgerType;
   amountCents: number;
   description: string;
@@ -14,7 +14,7 @@ export function recordLedgerEntry(entry: {
   editionId?: string;
 }) {
   const db = getDb();
-  db.insert(schema.ledger)
+  await db.insert(schema.ledger)
     .values({
       id: uuid(),
       type: entry.type,
@@ -29,10 +29,10 @@ export function recordLedgerEntry(entry: {
     .run();
 }
 
-export function getFinancials() {
+export async function getFinancials() {
   const db = getDb();
 
-  const totals = db
+  const totals = await db
     .select({
       type: schema.ledger.type,
       total: sql<number>`SUM(${schema.ledger.amountCents})`,
@@ -42,7 +42,7 @@ export function getFinancials() {
     .groupBy(schema.ledger.type)
     .all();
 
-  const recentEntries = db
+  const recentEntries = await db
     .select()
     .from(schema.ledger)
     .orderBy(sql`${schema.ledger.createdAt} DESC`)
@@ -62,9 +62,9 @@ export function getFinancials() {
   };
 }
 
-export function getEditionFinancials(editionId: string) {
+export async function getEditionFinancials(editionId: string) {
   const db = getDb();
-  return db
+  return await db
     .select()
     .from(schema.ledger)
     .where(eq(schema.ledger.editionId, editionId))

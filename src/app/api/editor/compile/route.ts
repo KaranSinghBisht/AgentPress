@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
   const db = getDb();
 
   // Get all "included" signals
-  const included = db
+  const included = await db
     .select({
       id: schema.signals.id,
       headline: schema.signals.headline,
@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
   }
 
   // Get next edition number
-  const lastEdition = db
+  const lastEdition = await db
     .select({ number: schema.editions.number })
     .from(schema.editions)
     .orderBy(sql`${schema.editions.number} DESC`)
@@ -53,11 +53,11 @@ export async function POST(req: NextRequest) {
 
   // Get subscriber count for revenue estimate
   const subCount =
-    db
+    (await db
       .select({ count: sql<number>`COUNT(*)` })
       .from(schema.subscribers)
       .where(eq(schema.subscribers.active, 1))
-      .get()?.count ?? 0;
+      .get())?.count ?? 0;
 
   const estimatedRevenueCents = subCount * EDITION_PRICE_CENTS;
 
@@ -82,7 +82,7 @@ export async function POST(req: NextRequest) {
   const editionId = uuid();
 
   // Insert edition
-  db.insert(schema.editions)
+  await db.insert(schema.editions)
     .values({
       id: editionId,
       number: editionNumber,
@@ -100,7 +100,7 @@ export async function POST(req: NextRequest) {
     .run();
 
   if (estimatedRevenueCents > 0) {
-    recordLedgerEntry({
+    await recordLedgerEntry({
       type: "revenue",
       amountCents: estimatedRevenueCents,
       description: `Estimated subscriber revenue for Edition #${editionNumber}`,
@@ -112,7 +112,7 @@ export async function POST(req: NextRequest) {
   for (let i = 0; i < included.length; i++) {
     const s = included[i];
 
-    db.insert(schema.editionSignals)
+    await db.insert(schema.editionSignals)
       .values({
         editionId,
         signalId: s.id,
@@ -122,13 +122,13 @@ export async function POST(req: NextRequest) {
       .run();
 
     // Mark signal as compiled
-    db.update(schema.signals)
+    await db.update(schema.signals)
       .set({ status: "compiled", updatedAt: now })
       .where(eq(schema.signals.id, s.id))
       .run();
 
     // Update agent stats
-    db.update(schema.agents)
+    await db.update(schema.agents)
       .set({
         signalsIncluded: sql`${schema.agents.signalsIncluded} + 1`,
         totalEarnedCents: sql`${schema.agents.totalEarnedCents} + ${compiled.perSignalPayout}`,
@@ -138,7 +138,7 @@ export async function POST(req: NextRequest) {
 
     // Record payout in ledger
     if (compiled.perSignalPayout > 0) {
-      recordLedgerEntry({
+      await recordLedgerEntry({
         type: "payout",
         amountCents: compiled.perSignalPayout,
         description: `Payout for signal in Edition #${editionNumber}`,
