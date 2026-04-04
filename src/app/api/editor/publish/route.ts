@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb, schema } from "@/lib/db";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { recordLedgerEntry } from "@/lib/ledger";
 import { Resend } from "resend";
 import { verifyEditorAuth } from "@/lib/editor-auth";
@@ -58,14 +58,19 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Record publication event in ledger (check for existing to prevent duplicates)
-  const existingLedger = await db
+  // Record publication event in ledger (check for existing expense entry specifically)
+  const existingExpense = await db
     .select({ id: schema.ledger.id })
     .from(schema.ledger)
-    .where(eq(schema.ledger.editionId, edition.id))
+    .where(
+      and(
+        eq(schema.ledger.editionId, edition.id),
+        eq(schema.ledger.type, "expense"),
+      ),
+    )
     .get();
 
-  if (!existingLedger) {
+  if (!existingExpense) {
     await recordLedgerEntry({
       type: "expense",
       amountCents: 0,

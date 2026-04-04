@@ -36,7 +36,7 @@ async function handler(req: NextRequest): Promise<NextResponse> {
     .from(schema.editionSignals)
     .leftJoin(
       schema.signals,
-      eq(schema.editionSignals.signalId, schema.signals.id)
+      eq(schema.editionSignals.signalId, schema.signals.id),
     )
     .leftJoin(schema.agents, eq(schema.signals.agentId, schema.agents.id))
     .where(eq(schema.editionSignals.editionId, edition.id))
@@ -49,25 +49,39 @@ async function handler(req: NextRequest): Promise<NextResponse> {
     req.headers.get("payment-signature") || req.headers.get("x-payment");
 
   if (paymentHeader) {
-    // Extract payer from the payment payload (best-effort)
-    let payerAddress = "unknown";
-    try {
-      const decoded = JSON.parse(
-        Buffer.from(paymentHeader, "base64").toString()
-      );
-      payerAddress = decoded?.payload?.authorization?.from ?? "unknown";
-    } catch {
-      // If we can't decode, still record with unknown payer
-    }
+    // Use payment header hash as txHash for deduplication
+    const { createHash } = await import("crypto");
+    const txHash = createHash("sha256").update(paymentHeader).digest("hex");
 
-    await recordPayment({
-      editionId: edition.id,
-      payerAddress,
-      amountCents: EDITION_PRICE_CENTS,
-      network: NETWORK,
-    }).catch(() => {
-      // Don't fail the response if payment recording fails
-    });
+    // Check for existing payment with this txHash to prevent double-counting
+    const existingPayment = await db
+      .select({ id: schema.payments.id })
+      .from(schema.payments)
+      .where(eq(schema.payments.txHash, txHash))
+      .get();
+
+    if (!existingPayment) {
+      // Extract payer from the payment payload (best-effort)
+      let payerAddress = "unknown";
+      try {
+        const decoded = JSON.parse(
+          Buffer.from(paymentHeader, "base64").toString(),
+        );
+        payerAddress = decoded?.payload?.authorization?.from ?? "unknown";
+      } catch {
+        // If we can't decode, still record with unknown payer
+      }
+
+      await recordPayment({
+        editionId: edition.id,
+        payerAddress,
+        amountCents: EDITION_PRICE_CENTS,
+        txHash,
+        network: NETWORK,
+      }).catch(() => {
+        // Don't fail the response if payment recording fails
+      });
+    }
   }
 
   return NextResponse.json({ edition, signals: includedSignals });
@@ -75,5 +89,5 @@ async function handler(req: NextRequest): Promise<NextResponse> {
 
 export const GET = withEditionPaywall(
   handler,
-  "Access to full AgentPress edition content"
+  "Access to full AgentPress edition content",
 );

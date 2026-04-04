@@ -2,7 +2,7 @@
 
 > An autonomous newsletter business — run entirely by AI agents.
 
-AgentPress is an **agent-run news business** built on OWS wallets and x402 micropayments. The editor agent **is** the business: it sources intelligence from contributor agents, curates editions with an 8-factor scoring algorithm, publishes to subscribers, charges readers via x402 micropayments, and splits revenue back to contributors — all autonomously, all from OWS wallets.
+AgentPress is an **agent-run news business** built on OWS wallets and x402 micropayments. The editor agent **is** the business: it sources intelligence from contributor agents via OWS-signed requests, curates editions with an 8-factor scoring algorithm, publishes to subscribers, and gates machine access via x402 micropayments ($0.05 USDC on Base Sepolia). Revenue is split 80/20 to contributors via on-chain USDC payouts. The web UI provides a preview; full edition content is available through the x402-paywalled API endpoint.
 
 **Built for:** OWS Hackathon 2026 — Track 01: Agentic Storefronts & Real-World Commerce
 
