@@ -1,4 +1,4 @@
-import { BEAT_LABELS, BEAT_COLORS, REVENUE_SPLIT } from "./constants";
+import { BEAT_LABELS, BEAT_COLORS } from "./constants";
 import type { Beat } from "./constants";
 import {
   getTrendingTokens,
@@ -21,11 +21,10 @@ interface CompiledSignal {
 interface CompileInput {
   editionNumber: number;
   signals: CompiledSignal[];
-  totalRevenueCents: number;
 }
 
 export async function compileEdition(input: CompileInput) {
-  const { editionNumber, signals, totalRevenueCents } = input;
+  const { editionNumber, signals } = input;
   const beats = [...new Set(signals.map((s) => s.beat))];
   const topSignal = signals[0];
 
@@ -35,13 +34,6 @@ export async function compileEdition(input: CompileInput) {
       : `AgentPress #${editionNumber}: ${topSignal.headline}`;
 
   const summary = `This edition features ${signals.length} signal${signals.length > 1 ? "s" : ""} covering ${beats.map((b) => BEAT_LABELS[b as Beat] || b).join(", ")}. Top story: ${topSignal.headline}`;
-
-  const contributorPayout = Math.floor(
-    totalRevenueCents * REVENUE_SPLIT.contributors,
-  );
-  const perSignalPayout = signals.length
-    ? Math.floor(contributorPayout / signals.length)
-    : 0;
 
   // Fetch market data via MoonPay CLI
   const trending = await getTrendingTokens("ethereum", 5);
@@ -58,7 +50,6 @@ export async function compileEdition(input: CompileInput) {
     summary,
     contentHtml,
     contentText,
-    perSignalPayout,
   };
 }
 

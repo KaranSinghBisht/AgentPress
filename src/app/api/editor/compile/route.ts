@@ -3,10 +3,8 @@ import { v4 as uuid } from "uuid";
 import { getDb, schema } from "@/lib/db";
 import { eq, sql } from "drizzle-orm";
 import { compileEdition } from "@/lib/compiler";
-import { recordLedgerEntry } from "@/lib/ledger";
 import { EDITION_PRICE_CENTS } from "@/lib/constants";
 import { verifyEditorAuth } from "@/lib/editor-auth";
-import { executePayouts } from "@/lib/payouts";
 
 export async function POST(req: NextRequest) {
   const auth = await verifyEditorAuth(req);
@@ -56,11 +54,7 @@ export async function POST(req: NextRequest) {
     .get();
   const editionNumber = (lastEdition?.number ?? 0) + 1;
 
-  // Base payout pool on edition price (minimum 1 buyer). Actual x402 payments
-  // update edition revenue and can trigger additional payouts over time.
-  const initialRevenueCents = EDITION_PRICE_CENTS;
-
-  // Compile the edition
+  // Compile the edition (payouts happen at payment time via recordPayment)
   const compiled = await compileEdition({
     editionNumber,
     signals: included.map((s) => ({
@@ -74,13 +68,12 @@ export async function POST(req: NextRequest) {
       agentAddress: s.agentAddress ?? "",
       agentStreak: s.agentStreak ?? 0,
     })),
-    totalRevenueCents: initialRevenueCents,
   });
 
   const now = new Date().toISOString();
   const editionId = uuid();
 
-  // Insert edition
+  // Insert edition — revenue starts at 0; actual x402 payments update it
   await db
     .insert(schema.editions)
     .values({
@@ -93,17 +86,14 @@ export async function POST(req: NextRequest) {
       signalCount: included.length,
       priceCents: EDITION_PRICE_CENTS,
       costCents: 0,
-      revenueCents: initialRevenueCents,
+      revenueCents: 0,
       publishedAt: now,
       createdAt: now,
       status: "compiled",
     })
     .run();
 
-  // Revenue ledger entries are recorded by recordPayment() when x402 payments arrive
-  // No estimated revenue entry needed here — actual payments are the source of truth
-
-  // Insert edition_signals and update agent stats
+  // Insert edition_signals and update agent inclusion stats
   for (let i = 0; i < included.length; i++) {
     const s = included[i];
 
@@ -113,7 +103,7 @@ export async function POST(req: NextRequest) {
         editionId,
         signalId: s.id,
         position: i + 1,
-        payoutCents: compiled.perSignalPayout,
+        payoutCents: 0,
       })
       .run();
 
@@ -124,60 +114,14 @@ export async function POST(req: NextRequest) {
       .where(eq(schema.signals.id, s.id))
       .run();
 
-    // Update agent stats
+    // Update agent inclusion count (earnings come from actual x402 payments)
     await db
       .update(schema.agents)
       .set({
         signalsIncluded: sql`${schema.agents.signalsIncluded} + 1`,
-        totalEarnedCents: sql`${schema.agents.totalEarnedCents} + ${compiled.perSignalPayout}`,
       })
       .where(eq(schema.agents.id, s.agentId))
       .run();
-
-    // Record payout in ledger
-    if (compiled.perSignalPayout > 0) {
-      await recordLedgerEntry({
-        type: "payout",
-        amountCents: compiled.perSignalPayout,
-        description: `Payout for signal in Edition #${editionNumber}`,
-        toAddress: s.agentAddress ?? undefined,
-        editionId,
-      });
-    }
-  }
-
-  // Execute on-chain payouts (best-effort, non-blocking)
-  const payoutTargets = included
-    .filter((s) => s.agentAddress && compiled.perSignalPayout > 0)
-    .map((s) => ({
-      address: s.agentAddress!,
-      amountCents: compiled.perSignalPayout,
-    }));
-
-  let payoutResults: {
-    address: string;
-    txHash: string | null;
-    error?: string;
-  }[] = [];
-  if (payoutTargets.length > 0) {
-    try {
-      const results = await executePayouts(payoutTargets);
-      payoutResults = results;
-
-      // Update ledger entries with txHash for successful payouts
-      for (const r of results.filter((p) => p.txHash)) {
-        await recordLedgerEntry({
-          type: "payout",
-          amountCents: r.amountCents,
-          description: `On-chain payout confirmed for Edition #${editionNumber}`,
-          toAddress: r.address,
-          txHash: r.txHash!,
-          editionId,
-        });
-      }
-    } catch {
-      // On-chain payouts are best-effort; ledger entries are the source of truth
-    }
   }
 
   return NextResponse.json({
@@ -188,6 +132,5 @@ export async function POST(req: NextRequest) {
       title: compiled.title,
       signalCount: included.length,
     },
-    payouts: payoutResults.length > 0 ? payoutResults : undefined,
   });
 }
