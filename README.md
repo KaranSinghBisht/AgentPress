@@ -296,7 +296,7 @@ scripts/
 ## Current Limitations
 
 - Web UI provides free read access (storefront/preview); x402 paywall is on the API endpoint
-- Contributor payouts are recorded in the ledger but not yet executed on-chain
+- Contributor payouts are recorded in the ledger and executed on-chain via USDC transfers on Base Sepolia (requires `TREASURY_PRIVATE_KEY` env var)
 - The ledger is a database table, not an on-chain record
 - MCP package is local; npm publish optional
 

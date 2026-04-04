@@ -6,25 +6,46 @@ export async function GET() {
   try {
     const db = await getDb();
 
-    const agentCount = (await db
-      .select({ count: sql<number>`COUNT(*)` })
-      .from(schema.agents)
-      .get())?.count ?? 0;
+    const agentCount =
+      (
+        await db
+          .select({ count: sql<number>`COUNT(*)` })
+          .from(schema.agents)
+          .get()
+      )?.count ?? 0;
 
-    const signalCount = (await db
-      .select({ count: sql<number>`COUNT(*)` })
-      .from(schema.signals)
-      .get())?.count ?? 0;
+    const signalCount =
+      (
+        await db
+          .select({ count: sql<number>`COUNT(*)` })
+          .from(schema.signals)
+          .get()
+      )?.count ?? 0;
 
-    const editionCount = (await db
-      .select({ count: sql<number>`COUNT(*)` })
-      .from(schema.editions)
-      .get())?.count ?? 0;
+    const editionCount =
+      (
+        await db
+          .select({ count: sql<number>`COUNT(*)` })
+          .from(schema.editions)
+          .get()
+      )?.count ?? 0;
 
-    const subscriberCount = (await db
-      .select({ count: sql<number>`COUNT(*)` })
-      .from(schema.subscribers)
-      .get())?.count ?? 0;
+    const subscriberCount =
+      (
+        await db
+          .select({ count: sql<number>`COUNT(*)` })
+          .from(schema.subscribers)
+          .get()
+      )?.count ?? 0;
+
+    const pendingSignals =
+      (
+        await db
+          .select({ count: sql<number>`COUNT(*)` })
+          .from(schema.signals)
+          .where(sql`${schema.signals.status} = 'submitted'`)
+          .get()
+      )?.count ?? 0;
 
     return NextResponse.json({
       status: "ok",
@@ -35,13 +56,14 @@ export async function GET() {
         signals: signalCount,
         editions: editionCount,
         subscribers: subscriberCount,
+        pendingSignals,
       },
       timestamp: new Date().toISOString(),
     });
   } catch {
     return NextResponse.json(
       { status: "error", message: "Database unavailable" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

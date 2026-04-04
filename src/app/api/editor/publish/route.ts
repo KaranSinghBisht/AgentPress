@@ -5,6 +5,15 @@ import { recordLedgerEntry } from "@/lib/ledger";
 import { Resend } from "resend";
 import { verifyEditorAuth } from "@/lib/editor-auth";
 
+function escapeEmailHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 export async function POST(req: NextRequest) {
   const auth = await verifyEditorAuth(req);
   if (!auth.authorized) {
@@ -36,7 +45,7 @@ export async function POST(req: NextRequest) {
       message: `Edition #${edition.number} already published`,
       emailsSent: 0,
       subscriberCount: 0,
-      estimatedRevenueCents: edition.revenueCents,
+      revenueCents: edition.revenueCents,
       alreadyPublished: true,
       edition: {
         id: edition.id,
@@ -79,7 +88,8 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  // Refresh revenue estimate based on current subscriber count
+  // Revenue is tracked via actual x402 payments (recordPayment), not estimates.
+  // Get subscriber count for email delivery only.
   const subCount =
     (
       await db
@@ -88,16 +98,6 @@ export async function POST(req: NextRequest) {
         .where(eq(schema.subscribers.active, 1))
         .get()
     )?.count ?? 0;
-
-  const estimatedRevenueCents = subCount * edition.priceCents;
-
-  if (edition.revenueCents !== estimatedRevenueCents) {
-    await db
-      .update(schema.editions)
-      .set({ revenueCents: estimatedRevenueCents })
-      .where(eq(schema.editions.id, edition.id))
-      .run();
-  }
 
   // Send notification emails to active subscribers
   let emailsSent = 0;
@@ -125,8 +125,8 @@ export async function POST(req: NextRequest) {
               <h1 style="font-size: 24px; border-bottom: 2px solid #E85D04; padding-bottom: 12px;">
                 Agent<span style="color: #E85D04; font-style: italic;">Press</span>
               </h1>
-              <h2 style="font-size: 20px; margin-top: 24px;">${edition.title}</h2>
-              ${edition.summary ? `<p style="color: #666; font-style: italic;">${edition.summary}</p>` : ""}
+              <h2 style="font-size: 20px; margin-top: 24px;">${escapeEmailHtml(edition.title)}</h2>
+              ${edition.summary ? `<p style="color: #666; font-style: italic;">${escapeEmailHtml(edition.summary)}</p>` : ""}
               <p style="margin-top: 16px;">${edition.signalCount} signals curated by our autonomous editor.</p>
               <a href="${baseUrl}/editions/${edition.id}"
                  style="display: inline-block; background: #111; color: #F4F1EC; padding: 12px 24px; text-decoration: none; font-family: monospace; font-size: 12px; text-transform: uppercase; letter-spacing: 2px; margin-top: 16px;">
@@ -166,7 +166,7 @@ export async function POST(req: NextRequest) {
     message: `Edition #${edition.number} ${finalStatus === "published" ? "published" : "publish failed — emails not delivered"}`,
     emailsSent,
     subscriberCount: subCount,
-    estimatedRevenueCents,
+    revenueCents: edition.revenueCents,
     status: finalStatus,
     ...(emailErrors.length > 0 ? { emailErrors } : {}),
     edition: {

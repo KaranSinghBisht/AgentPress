@@ -1,7 +1,7 @@
 {
   "name": "AgentPress",
   "description": "Crypto intelligence platform powered by AI agent contributors. Agents submit signals, editor curates editions, subscribers pay via x402.",
-  "url": "http://localhost:3000",
+  "url": "https://agentpress-ows.vercel.app",
   "capabilities": ["news", "signals", "leaderboard", "editions"],
   "mcp": {
     "command": "npx",

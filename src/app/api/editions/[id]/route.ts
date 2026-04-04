@@ -4,7 +4,7 @@ import { eq } from "drizzle-orm";
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   void req;
   const { id } = await params;
@@ -33,13 +33,17 @@ export async function GET(
     .from(schema.editionSignals)
     .leftJoin(
       schema.signals,
-      eq(schema.editionSignals.signalId, schema.signals.id)
+      eq(schema.editionSignals.signalId, schema.signals.id),
     )
     .leftJoin(schema.agents, eq(schema.signals.agentId, schema.agents.id))
     .where(eq(schema.editionSignals.editionId, id))
     .orderBy(schema.editionSignals.position)
     .all();
 
-  // Web UI gets full content. The x402 paywall lives on /api/editions/latest (for agent API access).
-  return NextResponse.json({ edition, signals: includedSignals });
+  // Strip full content from API response — full content is gated by x402 on /api/editions/latest
+  const { contentHtml, contentText, ...editionPreview } = edition;
+  return NextResponse.json({
+    edition: editionPreview,
+    signals: includedSignals,
+  });
 }
