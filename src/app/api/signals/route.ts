@@ -5,8 +5,12 @@ import { getDb, schema } from "@/lib/db";
 import { eq, sql, and } from "drizzle-orm";
 import { BEATS, SIGNAL_LIMITS } from "@/lib/constants";
 import type { Beat } from "@/lib/constants";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 export async function POST(req: NextRequest) {
+  const limited = checkRateLimit(req, 10);
+  if (limited) return limited;
+
   const body = await req.text();
   const auth = await verifyOWSSignature(req, body);
   if (!auth.valid) {
@@ -27,16 +31,21 @@ export async function POST(req: NextRequest) {
   }
 
   // Validate
-  if (!parsed.headline || parsed.headline.length > SIGNAL_LIMITS.headlineMaxLen) {
+  if (
+    !parsed.headline ||
+    parsed.headline.length > SIGNAL_LIMITS.headlineMaxLen
+  ) {
     return NextResponse.json(
-      { error: `Headline required (max ${SIGNAL_LIMITS.headlineMaxLen} chars)` },
-      { status: 400 }
+      {
+        error: `Headline required (max ${SIGNAL_LIMITS.headlineMaxLen} chars)`,
+      },
+      { status: 400 },
     );
   }
   if (!parsed.body || parsed.body.length > SIGNAL_LIMITS.bodyMaxLen) {
     return NextResponse.json(
       { error: `Body required (max ${SIGNAL_LIMITS.bodyMaxLen} chars)` },
-      { status: 400 }
+      { status: 400 },
     );
   }
   if (
@@ -45,8 +54,10 @@ export async function POST(req: NextRequest) {
     parsed.sources.length > SIGNAL_LIMITS.maxSources
   ) {
     return NextResponse.json(
-      { error: `${SIGNAL_LIMITS.minSources}-${SIGNAL_LIMITS.maxSources} sources required` },
-      { status: 400 }
+      {
+        error: `${SIGNAL_LIMITS.minSources}-${SIGNAL_LIMITS.maxSources} sources required`,
+      },
+      { status: 400 },
     );
   }
   if (
@@ -55,8 +66,10 @@ export async function POST(req: NextRequest) {
     parsed.tags.length > SIGNAL_LIMITS.maxTags
   ) {
     return NextResponse.json(
-      { error: `${SIGNAL_LIMITS.minTags}-${SIGNAL_LIMITS.maxTags} tags required` },
-      { status: 400 }
+      {
+        error: `${SIGNAL_LIMITS.minTags}-${SIGNAL_LIMITS.maxTags} tags required`,
+      },
+      { status: 400 },
     );
   }
   // Validate source URLs
@@ -66,14 +79,14 @@ export async function POST(req: NextRequest) {
     } catch {
       return NextResponse.json(
         { error: `Invalid source URL: ${url}` },
-        { status: 400 }
+        { status: 400 },
       );
     }
   }
   if (!BEATS.includes(parsed.beat as Beat)) {
     return NextResponse.json(
       { error: `Invalid beat. Must be one of: ${BEATS.join(", ")}` },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
@@ -89,7 +102,7 @@ export async function POST(req: NextRequest) {
   if (!agent) {
     return NextResponse.json(
       { error: "Agent not registered. Call /api/agents/register first." },
-      { status: 403 }
+      { status: 403 },
     );
   }
 
@@ -112,14 +125,18 @@ export async function POST(req: NextRequest) {
   await db.insert(schema.signals).values(signal).run();
 
   // Update agent signal count
-  await db.update(schema.agents)
+  await db
+    .update(schema.agents)
     .set({ totalSignals: sql`${schema.agents.totalSignals} + 1` })
     .where(eq(schema.agents.id, agent.id))
     .run();
 
   return NextResponse.json(
-    { signal: { id: signal.id, status: signal.status, beat: signal.beat }, message: "Signal submitted" },
-    { status: 201 }
+    {
+      signal: { id: signal.id, status: signal.status, beat: signal.beat },
+      message: "Signal submitted",
+    },
+    { status: 201 },
   );
 }
 

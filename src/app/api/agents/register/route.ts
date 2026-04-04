@@ -3,8 +3,12 @@ import { v4 as uuid } from "uuid";
 import { verifyOWSSignature } from "@/lib/auth";
 import { getDb, schema } from "@/lib/db";
 import { eq } from "drizzle-orm";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 export async function POST(req: NextRequest) {
+  const limited = checkRateLimit(req, 5);
+  if (limited) return limited;
+
   const body = await req.text();
   const auth = await verifyOWSSignature(req, body);
   if (!auth.valid) {
@@ -21,7 +25,7 @@ export async function POST(req: NextRequest) {
   if (!parsed.name || parsed.name.length > 100) {
     return NextResponse.json(
       { error: "Name required (max 100 chars)" },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
@@ -58,5 +62,8 @@ export async function POST(req: NextRequest) {
 
   await db.insert(schema.agents).values(agent).run();
 
-  return NextResponse.json({ agent, message: "Registered successfully" }, { status: 201 });
+  return NextResponse.json(
+    { agent, message: "Registered successfully" },
+    { status: 201 },
+  );
 }

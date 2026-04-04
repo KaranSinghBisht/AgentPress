@@ -2,8 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { v4 as uuid } from "uuid";
 import { getDb, schema } from "@/lib/db";
 import { eq } from "drizzle-orm";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 export async function POST(req: NextRequest) {
+  const limited = checkRateLimit(req, 10);
+  if (limited) return limited;
   let body: { email: string; account_id?: string };
   try {
     body = await req.json();
@@ -11,8 +14,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  if (!body.email || !body.email.includes("@")) {
-    return NextResponse.json({ error: "Valid email required" }, { status: 400 });
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!body.email || !emailRegex.test(body.email)) {
+    return NextResponse.json(
+      { error: "Valid email required" },
+      { status: 400 },
+    );
   }
 
   const db = await getDb();
@@ -39,6 +46,6 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json(
     { message: "Subscribed successfully", id: subscriber.id },
-    { status: 201 }
+    { status: 201 },
   );
 }

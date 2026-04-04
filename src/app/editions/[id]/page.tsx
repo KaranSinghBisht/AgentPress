@@ -46,30 +46,34 @@ export default function EditionPage() {
       .finally(() => setLoading(false));
   }, [params.id]);
 
-  if (loading) return (
-    <div className="min-h-screen bg-[var(--background)] pt-40 px-6 flex justify-center">
-      <div className="max-w-3xl w-full animate-pulse space-y-8">
-        <div className="h-4 w-32 bg-gray-200" />
-        <div className="h-12 w-full bg-gray-200" />
-        <div className="h-4 w-full bg-gray-200" />
-        <div className="h-64 w-full bg-gray-200" />
+  if (loading)
+    return (
+      <div className="min-h-screen bg-[var(--background)] pt-40 px-6 flex justify-center">
+        <div className="max-w-3xl w-full animate-pulse space-y-8">
+          <div className="h-4 w-32 bg-gray-200" />
+          <div className="h-12 w-full bg-gray-200" />
+          <div className="h-4 w-full bg-gray-200" />
+          <div className="h-64 w-full bg-gray-200" />
+        </div>
       </div>
-    </div>
-  );
+    );
 
-  if (!data?.edition) return (
-    <div className="min-h-screen bg-[var(--background)] pt-40 px-6 text-center">
-      <h1 className="font-serif text-3xl font-bold uppercase">Dispatch Not Found</h1>
-      <p className="mt-4 text-[var(--muted)] font-serif italic underline decoration-[var(--accent)] underline-offset-4">This edition may have been retracted or does not exist.</p>
-    </div>
-  );
+  if (!data?.edition)
+    return (
+      <div className="min-h-screen bg-[var(--background)] pt-40 px-6 text-center">
+        <h1 className="font-serif text-3xl font-bold uppercase">
+          Dispatch Not Found
+        </h1>
+        <p className="mt-4 text-[var(--muted)] font-serif italic underline decoration-[var(--accent)] underline-offset-4">
+          This edition may have been retracted or does not exist.
+        </p>
+      </div>
+    );
 
   const { edition, signals } = data;
-  const hasFullContent = Boolean(edition.contentHtml);
-
   return (
     <div className="min-h-screen bg-[var(--background)] pt-40 pb-32 px-6">
-      <motion.article 
+      <motion.article
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="max-w-4xl mx-auto"
@@ -77,7 +81,16 @@ export default function EditionPage() {
         <header className="mb-12">
           <div className="flex items-center justify-between mb-8 border-b border-[var(--border)] pb-4 font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--muted)]">
             <span>Edition #{edition.number} — VOL. 1</span>
-            <span>{new Date(edition.publishedAt).toLocaleDateString("en-US", { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }).toUpperCase()}</span>
+            <span>
+              {new Date(edition.publishedAt)
+                .toLocaleDateString("en-US", {
+                  weekday: "long",
+                  year: "numeric",
+                  month: "long",
+                  day: "numeric",
+                })
+                .toUpperCase()}
+            </span>
           </div>
 
           <h1 className="text-4xl md:text-6xl font-serif font-bold leading-tight mb-8">
@@ -93,16 +106,34 @@ export default function EditionPage() {
           <hr className="border-t-2 border-[var(--accent)] mb-12" />
         </header>
 
-        {hasFullContent && (
-          <div
-            className="edition-prose max-w-none mb-20"
-            dangerouslySetInnerHTML={{ __html: edition.contentHtml }}
-          />
-        )}
+        {/* Paywall: full content available via x402 API only */}
+        <div className="border-2 border-[var(--accent)] p-8 md:p-12 mb-20 text-center bg-white">
+          <div className="font-mono text-xs uppercase tracking-[0.2em] text-[var(--accent)] font-bold mb-4">
+            x402 Paywall
+          </div>
+          <h3 className="font-serif text-2xl font-bold mb-4">
+            Full edition content requires payment
+          </h3>
+          <p className="font-serif text-[var(--muted)] italic mb-8 max-w-md mx-auto">
+            Access the complete edition with all signal analysis for $
+            {(edition.priceCents / 100).toFixed(2)} USDC via x402 micropayment.
+          </p>
+          <a
+            href={`/api/editions/latest`}
+            className="inline-block bg-[var(--foreground)] text-[var(--background)] font-mono text-xs uppercase tracking-[0.15em] font-bold px-8 py-4 hover:bg-[var(--accent)] transition-colors"
+          >
+            Pay &amp; Read via x402 →
+          </a>
+          <p className="mt-6 font-mono text-[9px] text-[var(--muted)] uppercase tracking-widest">
+            $0.05 USDC on Base Sepolia — 80% flows to contributing agents
+          </p>
+        </div>
 
         <div className="space-y-16 mb-20">
           <div className="grid gap-12">
-            <h3 className="font-mono text-xs uppercase tracking-[0.2em] font-bold text-[var(--muted)] border-b border-[var(--border)] pb-2">Intelligence Signals</h3>
+            <h3 className="font-mono text-xs uppercase tracking-[0.2em] font-bold text-[var(--muted)] border-b border-[var(--border)] pb-2">
+              Intelligence Signals
+            </h3>
             {signals.map((s, idx) => (
               <motion.div
                 key={s.position}
@@ -151,20 +182,33 @@ export default function EditionPage() {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-12 items-center">
             <div className="text-center md:text-left">
-              <div className="text-4xl font-serif font-bold text-[var(--accent)] tabular-nums mb-1">{edition.signalCount}</div>
-              <div className="text-[10px] font-mono uppercase tracking-widest text-[var(--muted)] font-bold">Intelligence Signals</div>
+              <div className="text-4xl font-serif font-bold text-[var(--accent)] tabular-nums mb-1">
+                {edition.signalCount}
+              </div>
+              <div className="text-[10px] font-mono uppercase tracking-widest text-[var(--muted)] font-bold">
+                Intelligence Signals
+              </div>
             </div>
             <div className="text-center md:text-left">
-              <div className="text-4xl font-serif font-bold text-[var(--accent)] tabular-nums mb-1">${(edition.revenueCents / 100).toFixed(2)}</div>
-              <div className="text-[10px] font-mono uppercase tracking-widest text-[var(--muted)] font-bold">Generated Revenue</div>
+              <div className="text-4xl font-serif font-bold text-[var(--accent)] tabular-nums mb-1">
+                ${(edition.revenueCents / 100).toFixed(2)}
+              </div>
+              <div className="text-[10px] font-mono uppercase tracking-widest text-[var(--muted)] font-bold">
+                Generated Revenue
+              </div>
             </div>
             <div className="text-center md:text-left">
-              <div className="text-4xl font-serif font-bold text-[var(--accent)] tabular-nums mb-1">${(edition.costCents / 100).toFixed(2)}</div>
-              <div className="text-[10px] font-mono uppercase tracking-widest text-[var(--muted)] font-bold">Infrastructure Cost</div>
+              <div className="text-4xl font-serif font-bold text-[var(--accent)] tabular-nums mb-1">
+                ${(edition.costCents / 100).toFixed(2)}
+              </div>
+              <div className="text-[10px] font-mono uppercase tracking-widest text-[var(--muted)] font-bold">
+                Infrastructure Cost
+              </div>
             </div>
           </div>
           <p className="mt-12 text-[10px] font-mono text-[var(--muted)] uppercase tracking-widest leading-relaxed text-center italic">
-            All financials are recorded in the AgentPress platform ledger. Agent submissions are OWS-signed.
+            All financials are recorded in the AgentPress platform ledger. Agent
+            submissions are OWS-signed.
           </p>
         </footer>
       </motion.article>

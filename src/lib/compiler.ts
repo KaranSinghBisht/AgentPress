@@ -1,6 +1,10 @@
 import { BEAT_LABELS, BEAT_COLORS, REVENUE_SPLIT } from "./constants";
 import type { Beat } from "./constants";
-import { getTrendingTokens, formatMarketSnapshotHtml, formatMarketSnapshotText } from "./moonpay";
+import {
+  getTrendingTokens,
+  formatMarketSnapshotHtml,
+  formatMarketSnapshotText,
+} from "./moonpay";
 
 interface CompiledSignal {
   headline: string;
@@ -33,7 +37,7 @@ export async function compileEdition(input: CompileInput) {
   const summary = `This edition features ${signals.length} signal${signals.length > 1 ? "s" : ""} covering ${beats.map((b) => BEAT_LABELS[b as Beat] || b).join(", ")}. Top story: ${topSignal.headline}`;
 
   const contributorPayout = Math.floor(
-    totalRevenueCents * REVENUE_SPLIT.contributors
+    totalRevenueCents * REVENUE_SPLIT.contributors,
   );
   const perSignalPayout = signals.length
     ? Math.floor(contributorPayout / signals.length)
@@ -44,8 +48,10 @@ export async function compileEdition(input: CompileInput) {
   const marketHtml = formatMarketSnapshotHtml(trending);
   const marketText = formatMarketSnapshotText(trending);
 
-  const contentHtml = buildHtml(editionNumber, title, summary, signals) + marketHtml;
-  const contentText = buildText(editionNumber, title, summary, signals) + marketText;
+  const contentHtml =
+    buildHtml(editionNumber, title, summary, signals) + marketHtml;
+  const contentText =
+    buildText(editionNumber, title, summary, signals) + marketText;
 
   return {
     title,
@@ -60,7 +66,7 @@ function buildHtml(
   num: number,
   title: string,
   summary: string,
-  signals: CompiledSignal[]
+  signals: CompiledSignal[],
 ): string {
   const signalSections = signals
     .map(
@@ -73,12 +79,20 @@ function buildHtml(
       <h3 style="margin:0 0 8px;font-size:18px;color:#1A1A1A;">${escapeHtml(s.headline)}</h3>
       <p style="margin:0 0 12px;color:#4B5563;line-height:1.6;">${escapeHtml(s.body)}</p>
       <div style="font-size:13px;color:#6B7280;">
-        <strong>Sources:</strong> ${s.sources.map((url) => { try { return `<a href="${escapeHtml(url)}" style="color:#E85D04;">${escapeHtml(new URL(url).hostname)}</a>`; } catch { return `<span style="color:#E85D04;">${escapeHtml(url)}</span>`; } }).join(", ")}
+        <strong>Sources:</strong> ${s.sources
+          .map((url) => {
+            try {
+              return `<a href="${escapeHtml(url)}" style="color:#E85D04;">${escapeHtml(new URL(url).hostname)}</a>`;
+            } catch {
+              return `<span style="color:#E85D04;">${escapeHtml(url)}</span>`;
+            }
+          })
+          .join(", ")}
       </div>
       <div style="font-size:13px;color:#6B7280;margin-top:4px;">
         <strong>Filed by:</strong> ${escapeHtml(s.agentName)} (${s.agentAddress.slice(0, 6)}...${s.agentAddress.slice(-4)}) &middot; Streak: ${s.agentStreak} days
       </div>
-    </div>`
+    </div>`,
     )
     .join("");
 
@@ -106,13 +120,13 @@ function buildText(
   num: number,
   title: string,
   summary: string,
-  signals: CompiledSignal[]
+  signals: CompiledSignal[],
 ): string {
   const header = `AgentPress - Edition #${num}\n${"=".repeat(40)}\n\n${title}\n\n${summary}\n\n`;
   const body = signals
     .map(
       (s, i) =>
-        `--- Signal #${i + 1} [${s.beat}] (Score: ${s.score.toFixed(0)}) ---\n${s.headline}\n\n${s.body}\n\nSources: ${s.sources.join(", ")}\nFiled by: ${s.agentName} (${s.agentAddress.slice(0, 10)}...)\n`
+        `--- Signal #${i + 1} [${s.beat}] (Score: ${s.score.toFixed(0)}) ---\n${s.headline}\n\n${s.body}\n\nSources: ${s.sources.join(", ")}\nFiled by: ${s.agentName} (${s.agentAddress.slice(0, 10)}...)\n`,
     )
     .join("\n");
   const footer = `\n${"=".repeat(40)}\nPowered by AgentPress on OWS\n`;
@@ -124,5 +138,7 @@ function escapeHtml(str: string): string {
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;")
+    .replace(/`/g, "&#96;");
 }

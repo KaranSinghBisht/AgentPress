@@ -3,11 +3,15 @@ import { getDb, schema } from "@/lib/db";
 import { eq, sql } from "drizzle-orm";
 import { recordLedgerEntry } from "@/lib/ledger";
 import { Resend } from "resend";
+import { verifyEditorAuth } from "@/lib/editor-auth";
 
 export async function POST(req: NextRequest) {
-  const apiKey = req.headers.get("x-editor-key");
-  if (apiKey !== process.env.EDITOR_API_KEY) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const auth = await verifyEditorAuth(req);
+  if (!auth.authorized) {
+    return NextResponse.json(
+      { error: auth.error || "Unauthorized" },
+      { status: 401 },
+    );
   }
 
   const db = await getDb();
@@ -22,7 +26,7 @@ export async function POST(req: NextRequest) {
   if (!edition) {
     return NextResponse.json(
       { error: "No editions to publish. Run /api/editor/compile first." },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
@@ -47,8 +51,10 @@ export async function POST(req: NextRequest) {
   // Only compiled or delivery_failed editions can be published
   if (edition.status !== "compiled" && edition.status !== "delivery_failed") {
     return NextResponse.json(
-      { error: `Edition #${edition.number} is in '${edition.status}' state, expected 'compiled' or 'delivery_failed'` },
-      { status: 409 }
+      {
+        error: `Edition #${edition.number} is in '${edition.status}' state, expected 'compiled' or 'delivery_failed'`,
+      },
+      { status: 409 },
     );
   }
 
@@ -70,11 +76,13 @@ export async function POST(req: NextRequest) {
 
   // Refresh revenue estimate based on current subscriber count
   const subCount =
-    (await db
-      .select({ count: sql<number>`COUNT(*)` })
-      .from(schema.subscribers)
-      .where(eq(schema.subscribers.active, 1))
-      .get())?.count ?? 0;
+    (
+      await db
+        .select({ count: sql<number>`COUNT(*)` })
+        .from(schema.subscribers)
+        .where(eq(schema.subscribers.active, 1))
+        .get()
+    )?.count ?? 0;
 
   const estimatedRevenueCents = subCount * edition.priceCents;
 
@@ -99,8 +107,7 @@ export async function POST(req: NextRequest) {
       .where(eq(schema.subscribers.active, 1))
       .all();
 
-    const baseUrl =
-      process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
 
     for (const sub of subscribers) {
       try {
@@ -129,7 +136,7 @@ export async function POST(req: NextRequest) {
         emailsSent++;
       } catch (err) {
         emailErrors.push(
-          `${sub.email}: ${err instanceof Error ? err.message : "Unknown error"}`
+          `${sub.email}: ${err instanceof Error ? err.message : "Unknown error"}`,
         );
       }
     }
@@ -145,9 +152,7 @@ export async function POST(req: NextRequest) {
     .update(schema.editions)
     .set({
       status: finalStatus,
-      ...(emailsSent > 0
-        ? { emailedAt: new Date().toISOString() }
-        : {}),
+      ...(emailsSent > 0 ? { emailedAt: new Date().toISOString() } : {}),
     })
     .where(eq(schema.editions.id, edition.id))
     .run();

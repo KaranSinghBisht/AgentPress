@@ -2,11 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDb, schema } from "@/lib/db";
 import { eq } from "drizzle-orm";
 import { scoreSignal } from "@/lib/scoring";
+import { verifyEditorAuth } from "@/lib/editor-auth";
 
 export async function POST(req: NextRequest) {
-  const apiKey = req.headers.get("x-editor-key");
-  if (apiKey !== process.env.EDITOR_API_KEY) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const auth = await verifyEditorAuth(req);
+  if (!auth.authorized) {
+    return NextResponse.json(
+      { error: auth.error || "Unauthorized" },
+      { status: 401 },
+    );
   }
 
   const db = await getDb();
@@ -53,7 +57,7 @@ export async function POST(req: NextRequest) {
         agentStreak: s.agentStreak ?? 0,
         agentSignalsIncluded: s.agentIncluded ?? 0,
       },
-      beatCounts
+      beatCounts,
     );
     return { ...s, score, breakdown };
   });
@@ -73,7 +77,8 @@ export async function POST(req: NextRequest) {
         ? `Included (rank #${i + 1}, score ${s.score.toFixed(1)})`
         : `Not included (score ${s.score.toFixed(1)})`;
 
-    await db.update(schema.signals)
+    await db
+      .update(schema.signals)
       .set({
         status,
         score: s.score,

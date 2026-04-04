@@ -1,4 +1,15 @@
-import { execSync } from "child_process";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
+
+const execFileAsync = promisify(execFile);
+
+const ALLOWED_CHAINS = new Set([
+  "ethereum",
+  "polygon",
+  "base",
+  "arbitrum",
+  "optimism",
+]);
 
 export interface TrendingToken {
   name: string;
@@ -9,21 +20,41 @@ export interface TrendingToken {
   marketCap: number;
 }
 
-export async function getTrendingTokens(chain = "ethereum", limit = 5): Promise<TrendingToken[]> {
+export async function getTrendingTokens(
+  chain = "ethereum",
+  limit = 5,
+): Promise<TrendingToken[]> {
+  if (!ALLOWED_CHAINS.has(chain)) return [];
+  const safeLimit = Math.min(Math.max(1, Math.floor(limit)), 20);
+
   try {
-    const raw = execSync(
-      `npx moonpay token trending list --chain ${chain} --limit ${limit} --page 1 --json`,
-      { timeout: 15000, encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] }
+    const { stdout } = await execFileAsync(
+      "npx",
+      [
+        "moonpay",
+        "token",
+        "trending",
+        "list",
+        "--chain",
+        chain,
+        "--limit",
+        String(safeLimit),
+        "--page",
+        "1",
+        "--json",
+      ],
+      { timeout: 15000, encoding: "utf-8" },
     );
 
-    // Extract JSON from output (skip any non-JSON preamble like terms notice)
-    const jsonStart = raw.indexOf("{");
+    const jsonStart = stdout.indexOf("{");
     if (jsonStart === -1) return [];
-    const parsed = JSON.parse(raw.slice(jsonStart));
+    const parsed = JSON.parse(stdout.slice(jsonStart));
 
     return (parsed.items || []).map((t: Record<string, unknown>) => {
       const md = t.marketData as Record<string, unknown> | undefined;
-      const priceChange = md?.priceChangePercent as Record<string, number> | undefined;
+      const priceChange = md?.priceChangePercent as
+        | Record<string, number>
+        | undefined;
       const volume = md?.volume as Record<string, number> | undefined;
       return {
         name: t.name as string,

@@ -39,29 +39,25 @@ async function isNonceUsed(nonce: string): Promise<boolean> {
 
 async function recordNonce(nonce: string): Promise<void> {
   const db = await getDb();
-  await db
-    .insert(schema.nonces)
-    .values({ nonce, usedAt: Date.now() })
-    .run();
+  await db.insert(schema.nonces).values({ nonce, usedAt: Date.now() }).run();
 }
 
 async function cleanExpiredNonces(): Promise<void> {
   const db = await getDb();
   const cutoff = Date.now() - NONCE_WINDOW_MS;
-  await db
-    .delete(schema.nonces)
-    .where(lt(schema.nonces.usedAt, cutoff))
-    .run();
+  await db.delete(schema.nonces).where(lt(schema.nonces.usedAt, cutoff)).run();
 }
 
-// Clean expired nonces every 5 minutes
-setInterval(() => {
-  cleanExpiredNonces().catch(() => {});
-}, 5 * 60 * 1000);
+// Probabilistic nonce cleanup: ~1% of requests trigger cleanup (serverless-safe)
+async function maybeCleanNonces(): Promise<void> {
+  if (Math.random() < 0.01) {
+    await cleanExpiredNonces().catch(() => {});
+  }
+}
 
 export async function verifyOWSSignature(
   req: NextRequest,
-  body?: string
+  body?: string,
 ): Promise<AuthResult> {
   const accountId = req.headers.get("x-ap-account-id");
   const signature = req.headers.get("x-ap-signature");
@@ -84,7 +80,6 @@ export async function verifyOWSSignature(
   if (await isNonceUsed(nonce)) {
     return { valid: false, error: "Nonce already used" };
   }
-  await recordNonce(nonce);
 
   // Parse CAIP-10 account ID
   const parsed = parseCAIP10(accountId);
@@ -117,9 +112,7 @@ export async function verifyOWSSignature(
 
   // Verify with viem
   try {
-    const hexSig = signature.startsWith("0x")
-      ? signature
-      : `0x${signature}`;
+    const hexSig = signature.startsWith("0x") ? signature : `0x${signature}`;
     const isValid = await verifyMessage({
       address: parsed.address as `0x${string}`,
       message,
@@ -129,6 +122,12 @@ export async function verifyOWSSignature(
     if (!isValid) {
       return { valid: false, error: "Invalid signature" };
     }
+
+    // Record nonce AFTER successful verification to avoid consuming nonces on failed attempts
+    await recordNonce(nonce);
+
+    // Probabilistic cleanup (serverless-safe, no setInterval)
+    await maybeCleanNonces();
 
     return {
       valid: true,

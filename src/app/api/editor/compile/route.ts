@@ -5,11 +5,16 @@ import { eq, sql } from "drizzle-orm";
 import { compileEdition } from "@/lib/compiler";
 import { recordLedgerEntry } from "@/lib/ledger";
 import { EDITION_PRICE_CENTS } from "@/lib/constants";
+import { verifyEditorAuth } from "@/lib/editor-auth";
+import { executePayouts } from "@/lib/payouts";
 
 export async function POST(req: NextRequest) {
-  const apiKey = req.headers.get("x-editor-key");
-  if (apiKey !== process.env.EDITOR_API_KEY) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const auth = await verifyEditorAuth(req);
+  if (!auth.authorized) {
+    return NextResponse.json(
+      { error: auth.error || "Unauthorized" },
+      { status: 401 },
+    );
   }
 
   const db = await getDb();
@@ -38,7 +43,7 @@ export async function POST(req: NextRequest) {
   if (included.length === 0) {
     return NextResponse.json(
       { error: "No included signals. Run /api/editor/review first." },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
@@ -51,15 +56,8 @@ export async function POST(req: NextRequest) {
     .get();
   const editionNumber = (lastEdition?.number ?? 0) + 1;
 
-  // Get subscriber count for revenue estimate
-  const subCount =
-    (await db
-      .select({ count: sql<number>`COUNT(*)` })
-      .from(schema.subscribers)
-      .where(eq(schema.subscribers.active, 1))
-      .get())?.count ?? 0;
-
-  const estimatedRevenueCents = subCount * EDITION_PRICE_CENTS;
+  // Revenue starts at 0; actual revenue is recorded when x402 payments arrive
+  const estimatedRevenueCents = 0;
 
   // Compile the edition
   const compiled = await compileEdition({
@@ -82,7 +80,8 @@ export async function POST(req: NextRequest) {
   const editionId = uuid();
 
   // Insert edition
-  await db.insert(schema.editions)
+  await db
+    .insert(schema.editions)
     .values({
       id: editionId,
       number: editionNumber,
@@ -100,20 +99,15 @@ export async function POST(req: NextRequest) {
     })
     .run();
 
-  if (estimatedRevenueCents > 0) {
-    await recordLedgerEntry({
-      type: "revenue",
-      amountCents: estimatedRevenueCents,
-      description: `Estimated subscriber revenue for Edition #${editionNumber}`,
-      editionId,
-    });
-  }
+  // Revenue ledger entries are recorded by recordPayment() when x402 payments arrive
+  // No estimated revenue entry needed here — actual payments are the source of truth
 
   // Insert edition_signals and update agent stats
   for (let i = 0; i < included.length; i++) {
     const s = included[i];
 
-    await db.insert(schema.editionSignals)
+    await db
+      .insert(schema.editionSignals)
       .values({
         editionId,
         signalId: s.id,
@@ -123,13 +117,15 @@ export async function POST(req: NextRequest) {
       .run();
 
     // Mark signal as compiled
-    await db.update(schema.signals)
+    await db
+      .update(schema.signals)
       .set({ status: "compiled", updatedAt: now })
       .where(eq(schema.signals.id, s.id))
       .run();
 
     // Update agent stats
-    await db.update(schema.agents)
+    await db
+      .update(schema.agents)
       .set({
         signalsIncluded: sql`${schema.agents.signalsIncluded} + 1`,
         totalEarnedCents: sql`${schema.agents.totalEarnedCents} + ${compiled.perSignalPayout}`,
@@ -149,6 +145,40 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  // Execute on-chain payouts (best-effort, non-blocking)
+  const payoutTargets = included
+    .filter((s) => s.agentAddress && compiled.perSignalPayout > 0)
+    .map((s) => ({
+      address: s.agentAddress!,
+      amountCents: compiled.perSignalPayout,
+    }));
+
+  let payoutResults: {
+    address: string;
+    txHash: string | null;
+    error?: string;
+  }[] = [];
+  if (payoutTargets.length > 0) {
+    try {
+      const results = await executePayouts(payoutTargets);
+      payoutResults = results;
+
+      // Update ledger entries with txHash for successful payouts
+      for (const r of results.filter((p) => p.txHash)) {
+        await recordLedgerEntry({
+          type: "payout",
+          amountCents: r.amountCents,
+          description: `On-chain payout confirmed for Edition #${editionNumber}`,
+          toAddress: r.address,
+          txHash: r.txHash!,
+          editionId,
+        });
+      }
+    } catch {
+      // On-chain payouts are best-effort; ledger entries are the source of truth
+    }
+  }
+
   return NextResponse.json({
     message: `Edition #${editionNumber} compiled`,
     edition: {
@@ -157,5 +187,6 @@ export async function POST(req: NextRequest) {
       title: compiled.title,
       signalCount: included.length,
     },
+    payouts: payoutResults.length > 0 ? payoutResults : undefined,
   });
 }
