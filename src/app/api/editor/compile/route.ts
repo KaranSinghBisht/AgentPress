@@ -56,8 +56,9 @@ export async function POST(req: NextRequest) {
     .get();
   const editionNumber = (lastEdition?.number ?? 0) + 1;
 
-  // Revenue starts at 0; actual revenue is recorded when x402 payments arrive
-  const estimatedRevenueCents = 0;
+  // Base payout pool on edition price (minimum 1 buyer). Actual x402 payments
+  // update edition revenue and can trigger additional payouts over time.
+  const initialRevenueCents = EDITION_PRICE_CENTS;
 
   // Compile the edition
   const compiled = await compileEdition({
@@ -73,7 +74,7 @@ export async function POST(req: NextRequest) {
       agentAddress: s.agentAddress ?? "",
       agentStreak: s.agentStreak ?? 0,
     })),
-    totalRevenueCents: estimatedRevenueCents,
+    totalRevenueCents: initialRevenueCents,
   });
 
   const now = new Date().toISOString();
@@ -92,7 +93,7 @@ export async function POST(req: NextRequest) {
       signalCount: included.length,
       priceCents: EDITION_PRICE_CENTS,
       costCents: 0,
-      revenueCents: estimatedRevenueCents,
+      revenueCents: initialRevenueCents,
       publishedAt: now,
       createdAt: now,
       status: "compiled",

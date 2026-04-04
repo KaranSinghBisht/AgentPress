@@ -38,7 +38,11 @@ async function get(path: string, headers?: Record<string, string>) {
   return { status: res.status, body };
 }
 
-async function post(path: string, data: unknown, headers?: Record<string, string>) {
+async function post(
+  path: string,
+  data: unknown,
+  headers?: Record<string, string>,
+) {
   const res = await fetch(`${BASE_URL}${path}`, {
     method: "POST",
     headers: { "Content-Type": "application/json", ...headers },
@@ -54,7 +58,10 @@ async function testStatus() {
   ok("responds 200", status === 200);
   ok("status is ok", body?.status === "ok");
   ok("has platform field", typeof body?.platform === "string");
-  ok("has stats object", body?.stats !== null && typeof body?.stats === "object");
+  ok(
+    "has stats object",
+    body?.stats !== null && typeof body?.stats === "object",
+  );
 }
 
 async function testAgents(): Promise<string | null> {
@@ -103,7 +110,7 @@ async function testEditorReview(hasUnreviewed: boolean) {
   const { status, body } = await post(
     "/api/editor/review",
     {},
-    { "x-editor-key": "dev-editor-key-change-in-prod" }
+    { "x-editor-key": "dev-editor-key-change-in-prod" },
   );
   ok("responds 200", status === 200);
   ok("has reviewed count", typeof body?.reviewed === "number");
@@ -137,8 +144,14 @@ async function testEditionById(editionId: string | null) {
 
   const { status, body } = await get(`/api/editions/${editionId}`);
   ok("responds 200", status === 200);
-  ok("has edition object", body?.edition !== null && typeof body?.edition === "object");
-  ok("edition has contentHtml", typeof body?.edition?.contentHtml === "string");
+  ok(
+    "has edition object",
+    body?.edition !== null && typeof body?.edition === "object",
+  );
+  ok(
+    "edition strips contentHtml (x402 paywall)",
+    body?.edition?.contentHtml === undefined,
+  );
   ok("has signals array", Array.isArray(body?.signals));
 }
 
@@ -181,10 +194,11 @@ async function testFinancialsDeep() {
   ok("has payoutCents", typeof body?.payoutCents === "number");
   ok("has expenseCents", typeof body?.expenseCents === "number");
   ok("has profitCents", typeof body?.profitCents === "number");
-  const expectedProfit = body?.revenueCents - body?.expenseCents - body?.payoutCents;
+  const expectedProfit =
+    body?.revenueCents - body?.expenseCents - body?.payoutCents;
   ok(
     `profitCents math: ${body?.revenueCents} - ${body?.expenseCents} - ${body?.payoutCents} = ${expectedProfit}`,
-    body?.profitCents === expectedProfit
+    body?.profitCents === expectedProfit,
   );
 }
 
@@ -229,10 +243,13 @@ async function testEditorPipeline() {
     const reviewRes = await post(
       "/api/editor/review",
       {},
-      { "x-editor-key": "dev-editor-key-change-in-prod" }
+      { "x-editor-key": "dev-editor-key-change-in-prod" },
     );
     ok("review responds 200", reviewRes.status === 200);
-    ok("review has reviewed count", typeof reviewRes.body?.reviewed === "number");
+    ok(
+      "review has reviewed count",
+      typeof reviewRes.body?.reviewed === "number",
+    );
     ok("review reviewed >= 1", reviewRes.body?.reviewed >= 1);
 
     // Signal should now be "included" or "reviewed"
@@ -252,37 +269,67 @@ async function testEditorPipeline() {
     const compileRes = await post(
       "/api/editor/compile",
       {},
-      { "x-editor-key": "dev-editor-key-change-in-prod" }
+      { "x-editor-key": "dev-editor-key-change-in-prod" },
     );
     ok("compile responds 200", compileRes.status === 200);
-    ok("compile has edition.id", typeof compileRes.body?.edition?.id === "string");
-    ok("compile has edition.number", typeof compileRes.body?.edition?.number === "number");
-    ok("compile has edition.signalCount", typeof compileRes.body?.edition?.signalCount === "number");
+    ok(
+      "compile has edition.id",
+      typeof compileRes.body?.edition?.id === "string",
+    );
+    ok(
+      "compile has edition.number",
+      typeof compileRes.body?.edition?.number === "number",
+    );
+    ok(
+      "compile has edition.signalCount",
+      typeof compileRes.body?.edition?.signalCount === "number",
+    );
     testEditionId = compileRes.body?.edition?.id ?? null;
 
     // POST /api/editor/publish
     const publishRes = await post(
       "/api/editor/publish",
       {},
-      { "x-editor-key": "dev-editor-key-change-in-prod" }
+      { "x-editor-key": "dev-editor-key-change-in-prod" },
     );
     ok("publish responds 200", publishRes.status === 200);
-    ok("publish has emailsSent", typeof publishRes.body?.emailsSent === "number");
-    ok("publish has subscriberCount", typeof publishRes.body?.subscriberCount === "number");
-    ok("publish has edition.id", typeof publishRes.body?.edition?.id === "string");
+    ok(
+      "publish has emailsSent",
+      typeof publishRes.body?.emailsSent === "number",
+    );
+    ok(
+      "publish has subscriberCount",
+      typeof publishRes.body?.subscriberCount === "number",
+    );
+    ok(
+      "publish has edition.id",
+      typeof publishRes.body?.edition?.id === "string",
+    );
   } catch (err) {
     console.error(`  FAIL  editor pipeline error: ${err}`);
     failed++;
   } finally {
     try {
       if (testEditionId) {
-        await db.execute({ sql: "DELETE FROM edition_signals WHERE edition_id = ?", args: [testEditionId] });
-        await db.execute({ sql: "DELETE FROM ledger WHERE edition_id = ?", args: [testEditionId] });
-        await db.execute({ sql: "DELETE FROM editions WHERE id = ?", args: [testEditionId] });
+        await db.execute({
+          sql: "DELETE FROM edition_signals WHERE edition_id = ?",
+          args: [testEditionId],
+        });
+        await db.execute({
+          sql: "DELETE FROM ledger WHERE edition_id = ?",
+          args: [testEditionId],
+        });
+        await db.execute({
+          sql: "DELETE FROM editions WHERE id = ?",
+          args: [testEditionId],
+        });
         ok("test edition deleted", true);
       }
       if (testSignalId) {
-        await db.execute({ sql: "DELETE FROM signals WHERE id = ?", args: [testSignalId] });
+        await db.execute({
+          sql: "DELETE FROM signals WHERE id = ?",
+          args: [testSignalId],
+        });
         ok("test signal deleted", true);
       }
     } catch (cleanErr) {
@@ -306,14 +353,17 @@ async function testSubscribeAndPublishFlow() {
   const publishRes = await post(
     "/api/editor/publish",
     {},
-    { "x-editor-key": "dev-editor-key-change-in-prod" }
+    { "x-editor-key": "dev-editor-key-change-in-prod" },
   );
-  ok("publish responds 200 or 400", publishRes.status === 200 || publishRes.status === 400);
+  ok(
+    "publish responds 200 or 400",
+    publishRes.status === 200 || publishRes.status === 400,
+  );
 
   if (publishRes.status === 200) {
     ok(
       "emailsSent is a number",
-      typeof publishRes.body?.emailsSent === "number"
+      typeof publishRes.body?.emailsSent === "number",
     );
     // If the edition was already published (idempotency), subscriberCount may be 0
     if (publishRes.body?.alreadyPublished) {
@@ -321,17 +371,22 @@ async function testSubscribeAndPublishFlow() {
     } else {
       ok(
         "subscriberCount >= 1 (includes new subscriber)",
-        publishRes.body?.subscriberCount >= 1
+        publishRes.body?.subscriberCount >= 1,
       );
     }
   } else {
-    console.log("  INFO  no compiled edition available for publish — emailsSent check skipped");
+    console.log(
+      "  INFO  no compiled edition available for publish — emailsSent check skipped",
+    );
   }
 
   // Cleanup subscriber
   try {
     const db = getTestDb();
-    const result = await db.execute({ sql: "DELETE FROM subscribers WHERE email = ?", args: [testSubscriberEmail] });
+    const result = await db.execute({
+      sql: "DELETE FROM subscribers WHERE email = ?",
+      args: [testSubscriberEmail],
+    });
     ok("test subscriber deleted", result.rowsAffected === 1);
   } catch (err) {
     console.error(`  FAIL  subscriber cleanup error: ${err}`);
@@ -378,7 +433,7 @@ async function testPublishRetryIdempotency() {
     const compileRes = await post(
       "/api/editor/compile",
       {},
-      { "x-editor-key": "dev-editor-key-change-in-prod" }
+      { "x-editor-key": "dev-editor-key-change-in-prod" },
     );
     ok("compile responds 200", compileRes.status === 200);
     testEditionId = compileRes.body?.edition?.id ?? null;
@@ -392,7 +447,7 @@ async function testPublishRetryIdempotency() {
     const pub1 = await post(
       "/api/editor/publish",
       {},
-      { "x-editor-key": "dev-editor-key-change-in-prod" }
+      { "x-editor-key": "dev-editor-key-change-in-prod" },
     );
     ok("first publish responds 200", pub1.status === 200);
     ok("first publish status is published", pub1.body?.status === "published");
@@ -408,7 +463,7 @@ async function testPublishRetryIdempotency() {
     const pub2 = await post(
       "/api/editor/publish",
       {},
-      { "x-editor-key": "dev-editor-key-change-in-prod" }
+      { "x-editor-key": "dev-editor-key-change-in-prod" },
     );
     ok("retry publish responds 200", pub2.status === 200);
     ok("retry publish is idempotent", pub2.body?.alreadyPublished === true);
@@ -419,14 +474,18 @@ async function testPublishRetryIdempotency() {
       args: [testEditionId],
     });
     const count2 = Number((ledger2.rows[0] as unknown as { cnt: number }).cnt);
-    ok(`no duplicate ledger entries (${count1} === ${count2})`, count1 === count2);
+    ok(
+      `no duplicate ledger entries (${count1} === ${count2})`,
+      count1 === count2,
+    );
 
     // Verify edition status in DB
     const edResult = await db.execute({
       sql: "SELECT status FROM editions WHERE id = ?",
       args: [testEditionId],
     });
-    const edStatus = (edResult.rows[0] as unknown as { status: string })?.status;
+    const edStatus = (edResult.rows[0] as unknown as { status: string })
+      ?.status;
     ok("edition status is 'published'", edStatus === "published");
   } catch (err) {
     console.error(`  FAIL  publish retry error: ${err}`);
@@ -434,12 +493,24 @@ async function testPublishRetryIdempotency() {
   } finally {
     try {
       if (testEditionId) {
-        await db.execute({ sql: "DELETE FROM edition_signals WHERE edition_id = ?", args: [testEditionId] });
-        await db.execute({ sql: "DELETE FROM ledger WHERE edition_id = ?", args: [testEditionId] });
-        await db.execute({ sql: "DELETE FROM editions WHERE id = ?", args: [testEditionId] });
+        await db.execute({
+          sql: "DELETE FROM edition_signals WHERE edition_id = ?",
+          args: [testEditionId],
+        });
+        await db.execute({
+          sql: "DELETE FROM ledger WHERE edition_id = ?",
+          args: [testEditionId],
+        });
+        await db.execute({
+          sql: "DELETE FROM editions WHERE id = ?",
+          args: [testEditionId],
+        });
       }
       if (testSignalId) {
-        await db.execute({ sql: "DELETE FROM signals WHERE id = ?", args: [testSignalId] });
+        await db.execute({
+          sql: "DELETE FROM signals WHERE id = ?",
+          args: [testSignalId],
+        });
       }
     } catch (cleanErr) {
       console.error(`  FAIL  retry test cleanup error: ${cleanErr}`);
@@ -486,7 +557,7 @@ async function testEditionStatusFlow() {
     const compileRes = await post(
       "/api/editor/compile",
       {},
-      { "x-editor-key": "dev-editor-key-change-in-prod" }
+      { "x-editor-key": "dev-editor-key-change-in-prod" },
     );
     ok("compile responds 200", compileRes.status === 200);
     testEditionId = compileRes.body?.edition?.id ?? null;
@@ -496,14 +567,15 @@ async function testEditionStatusFlow() {
         sql: "SELECT status FROM editions WHERE id = ?",
         args: [testEditionId],
       });
-      const status = (edResult.rows[0] as unknown as { status: string })?.status;
+      const status = (edResult.rows[0] as unknown as { status: string })
+        ?.status;
       ok("edition status after compile is 'compiled'", status === "compiled");
 
       // Publish — should transition to 'published'
       const pubRes = await post(
         "/api/editor/publish",
         {},
-        { "x-editor-key": "dev-editor-key-change-in-prod" }
+        { "x-editor-key": "dev-editor-key-change-in-prod" },
       );
       ok("publish responds 200", pubRes.status === 200);
 
@@ -511,8 +583,12 @@ async function testEditionStatusFlow() {
         sql: "SELECT status FROM editions WHERE id = ?",
         args: [testEditionId],
       });
-      const status2 = (edResult2.rows[0] as unknown as { status: string })?.status;
-      ok("edition status after publish is 'published'", status2 === "published");
+      const status2 = (edResult2.rows[0] as unknown as { status: string })
+        ?.status;
+      ok(
+        "edition status after publish is 'published'",
+        status2 === "published",
+      );
     }
   } catch (err) {
     console.error(`  FAIL  status flow error: ${err}`);
@@ -520,12 +596,24 @@ async function testEditionStatusFlow() {
   } finally {
     try {
       if (testEditionId) {
-        await db.execute({ sql: "DELETE FROM edition_signals WHERE edition_id = ?", args: [testEditionId] });
-        await db.execute({ sql: "DELETE FROM ledger WHERE edition_id = ?", args: [testEditionId] });
-        await db.execute({ sql: "DELETE FROM editions WHERE id = ?", args: [testEditionId] });
+        await db.execute({
+          sql: "DELETE FROM edition_signals WHERE edition_id = ?",
+          args: [testEditionId],
+        });
+        await db.execute({
+          sql: "DELETE FROM ledger WHERE edition_id = ?",
+          args: [testEditionId],
+        });
+        await db.execute({
+          sql: "DELETE FROM editions WHERE id = ?",
+          args: [testEditionId],
+        });
       }
       if (testSignalId) {
-        await db.execute({ sql: "DELETE FROM signals WHERE id = ?", args: [testSignalId] });
+        await db.execute({
+          sql: "DELETE FROM signals WHERE id = ?",
+          args: [testSignalId],
+        });
       }
     } catch (cleanErr) {
       console.error(`  FAIL  status flow cleanup error: ${cleanErr}`);
@@ -543,7 +631,10 @@ async function testX402Paywall() {
 
   // Check financials includes payment fields
   const { body: fin } = await get("/api/financials");
-  ok("financials has paymentRevenueCents", typeof fin?.paymentRevenueCents === "number");
+  ok(
+    "financials has paymentRevenueCents",
+    typeof fin?.paymentRevenueCents === "number",
+  );
   ok("financials has paymentCount", typeof fin?.paymentCount === "number");
 }
 
@@ -553,17 +644,28 @@ async function testErrorHandling() {
   // POST /api/editor/review without auth header — expect 401
   const noAuthRes = await post("/api/editor/review", {});
   ok("review without key responds 401", noAuthRes.status === 401);
-  ok("review without key has error field", typeof noAuthRes.body?.error === "string");
+  ok(
+    "review without key has error field",
+    typeof noAuthRes.body?.error === "string",
+  );
 
   // POST /api/subscribe with invalid email (no @) — expect 400
   const badEmailRes = await post("/api/subscribe", { email: "notanemail" });
   ok("subscribe with invalid email responds 400", badEmailRes.status === 400);
-  ok("subscribe with invalid email has error field", typeof badEmailRes.body?.error === "string");
+  ok(
+    "subscribe with invalid email has error field",
+    typeof badEmailRes.body?.error === "string",
+  );
 
   // GET /api/editions/nonexistent-id — expect 404
-  const notFoundRes = await get("/api/editions/nonexistent-id-that-does-not-exist");
+  const notFoundRes = await get(
+    "/api/editions/nonexistent-id-that-does-not-exist",
+  );
   ok("editions/nonexistent-id responds 404", notFoundRes.status === 404);
-  ok("editions/nonexistent-id has error field", typeof notFoundRes.body?.error === "string");
+  ok(
+    "editions/nonexistent-id has error field",
+    typeof notFoundRes.body?.error === "string",
+  );
 }
 
 async function testSubscribe(): Promise<string | null> {
@@ -579,7 +681,10 @@ async function cleanupSubscriber(email: string) {
   console.log("\n[11] Cleanup — delete test subscriber from DB");
   try {
     const db = getTestDb();
-    const result = await db.execute({ sql: "DELETE FROM subscribers WHERE email = ?", args: [email] });
+    const result = await db.execute({
+      sql: "DELETE FROM subscribers WHERE email = ?",
+      args: [email],
+    });
     ok("test subscriber deleted", result.rowsAffected === 1);
   } catch (err) {
     console.error(`  FAIL  cleanup error: ${err}`);
@@ -596,7 +701,9 @@ async function main() {
   try {
     await fetch(`${BASE_URL}/api/status`);
   } catch {
-    console.error(`\nERROR: Cannot reach ${BASE_URL} — is the dev server running?`);
+    console.error(
+      `\nERROR: Cannot reach ${BASE_URL} — is the dev server running?`,
+    );
     process.exit(1);
   }
 
@@ -611,7 +718,9 @@ async function main() {
     const { body } = await get("/api/signals?status=submitted");
     hasUnreviewed = Array.isArray(body?.signals) && body.signals.length > 0;
     if (!hasUnreviewed) {
-      console.log("\n  INFO  no unreviewed signals found — editor review will be skipped");
+      console.log(
+        "\n  INFO  no unreviewed signals found — editor review will be skipped",
+      );
     }
   }
 

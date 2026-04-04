@@ -119,7 +119,7 @@ export default function EditionPage() {
             {(edition.priceCents / 100).toFixed(2)} USDC via x402 micropayment.
           </p>
           <a
-            href={`/api/editions/latest`}
+            href={`/api/editions/${edition.id}/full`}
             className="inline-block bg-[var(--foreground)] text-[var(--background)] font-mono text-xs uppercase tracking-[0.15em] font-bold px-8 py-4 hover:bg-[var(--accent)] transition-colors"
           >
             Pay &amp; Read via x402 →

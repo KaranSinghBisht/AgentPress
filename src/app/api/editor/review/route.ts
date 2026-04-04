@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb, schema } from "@/lib/db";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { scoreSignal } from "@/lib/scoring";
 import { verifyEditorAuth } from "@/lib/editor-auth";
 
@@ -87,6 +87,31 @@ export async function POST(req: NextRequest) {
       })
       .where(eq(schema.signals.id, s.id))
       .run();
+  }
+
+  // Update agent streaks: included agents get streak+1, others reset to 0
+  const includedAgentIds = new Set(
+    scored.slice(0, maxInclude).map((s) => s.agentId),
+  );
+  const allAgentIds = new Set(scored.map((s) => s.agentId));
+
+  for (const agentId of allAgentIds) {
+    if (includedAgentIds.has(agentId)) {
+      await db
+        .update(schema.agents)
+        .set({
+          currentStreak: sql`${schema.agents.currentStreak} + 1`,
+          longestStreak: sql`MAX(${schema.agents.longestStreak}, ${schema.agents.currentStreak} + 1)`,
+        })
+        .where(eq(schema.agents.id, agentId))
+        .run();
+    } else {
+      await db
+        .update(schema.agents)
+        .set({ currentStreak: 0 })
+        .where(eq(schema.agents.id, agentId))
+        .run();
+    }
   }
 
   return NextResponse.json({

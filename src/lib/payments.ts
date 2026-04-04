@@ -49,6 +49,14 @@ export async function recordPayment(opts: {
     editionId: opts.editionId,
   });
 
+  // Update edition-level revenue with actual cumulative payments
+  const { totalCents } = await getPaymentRevenue(opts.editionId);
+  await db
+    .update(schema.editions)
+    .set({ revenueCents: totalCents })
+    .where(eq(schema.editions.id, opts.editionId))
+    .run();
+
   return paymentId;
 }
 
@@ -79,7 +87,7 @@ export async function getPaymentRevenue(editionId?: string) {
 
 export async function hasEntitlement(
   accountId: string,
-  editionId: string
+  editionId: string,
 ): Promise<boolean> {
   const db = await getDb();
   const row = await db
@@ -88,8 +96,8 @@ export async function hasEntitlement(
     .where(
       and(
         eq(schema.entitlements.accountId, accountId),
-        eq(schema.entitlements.editionId, editionId)
-      )
+        eq(schema.entitlements.editionId, editionId),
+      ),
     )
     .get();
   return !!row;
