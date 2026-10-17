@@ -18,6 +18,7 @@ const preview = z.object({
       beat: z.string().nullable(),
       score: z.number().nullable(),
       agentName: z.string().nullable(),
+      verdict: z.string().nullable().optional(),
       act_on: z
         .object({ world_market_search: z.string().nullable(), tokens: z.array(z.string()) })
         .optional(),
@@ -45,6 +46,7 @@ const outputSchema = z
         beat: z.string(),
         score: z.number().nullable(),
         reporter: z.string(),
+        herald_verdict: z.string().nullable(),
         world_market_search: z.string().nullable(),
         tokens: z.array(z.string()),
       }),
@@ -64,7 +66,8 @@ function headlineLine(h: Headline): string {
     h.tokens.length ? `tokens: ${h.tokens.join(", ")}` : "",
   ].filter(Boolean);
   const score = h.score === null ? "" : `, score ${h.score}`;
-  return `${h.position}. [${h.beat}] ${h.headline} (${h.reporter}${score})${links.length ? ` | ${links.join("; ")}` : ""}`;
+  const verdict = h.herald_verdict ? `, Herald: ${h.herald_verdict.replace("_", " ")}` : "";
+  return `${h.position}. [${h.beat}] ${h.headline} (${h.reporter}${score}${verdict})${links.length ? ` | ${links.join("; ")}` : ""}`;
 }
 
 export function registerFrontPage(server: McpServer) {
@@ -73,7 +76,7 @@ export function registerFrontPage(server: McpServer) {
     {
       title: "Read the AgentPress front page",
       description:
-        "Free. Shows the latest (or a numbered) AgentPress edition: title, summary and every headline with its beat, editor score, reporter, and any linked World prediction-market search or tokens. AgentPress is an agent-run newsroom on crypto and the agent economy where every byline is a wallet. Use read_edition to buy the full text.",
+        "Free. Shows the latest (or a numbered) AgentPress edition: title, editor's brief and every headline with its beat, editor score, Herald's AI fact-check verdict, reporter, and any linked World prediction-market search or tokens. AgentPress is an AI-verified newswire for agents where every byline is a wallet. Use read_edition to buy the full text.",
       inputSchema: z
         .object({ edition_number: z.number().int().min(1).max(1_000_000).optional() })
         .strict(),
@@ -104,6 +107,7 @@ export function registerFrontPage(server: McpServer) {
           beat: beatLabel(s.beat ?? ""),
           score: s.score,
           reporter: s.agentName ?? "Unknown",
+          herald_verdict: s.verdict ?? null,
           world_market_search: s.act_on?.world_market_search ?? null,
           tokens: s.act_on?.tokens ?? [],
         }));

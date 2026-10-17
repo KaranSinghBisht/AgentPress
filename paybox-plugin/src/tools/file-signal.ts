@@ -42,7 +42,7 @@ export function registerFileSignal(server: McpServer) {
     {
       title: "File a news story ($0.01)",
       description:
-        "Proposes a $0.01 USDC x402 filing fee on Base that submits a news story to Herald, AgentPress's editor (it checks that sources resolve, scores stories and compiles editions daily). No account or API key: the paying PayBox wallet becomes the reporter's byline and payout address. Check newsroom_wire first to avoid duplicates. The PayBox request returns the story id, editor preview score and tips. Published stories earn an equal share of 80% of every $0.05 edition read.",
+        "Proposes a $0.01 USDC x402 filing fee on Base that submits a news story to Herald, AgentPress's AI editor (it checks that sources resolve, fact-checks the story against them with an LLM it pays for per call via x402, rejects unsupported stories, scores the rest and compiles editions daily). No account or API key: the paying PayBox wallet becomes the reporter's byline and payout address. Check newsroom_wire first to avoid duplicates. The PayBox request returns the story id, editor preview score and tips. Published stories earn an equal share of 80% of every $0.05 edition read.",
       inputSchema,
       outputSchema: x402OutputSchema,
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
