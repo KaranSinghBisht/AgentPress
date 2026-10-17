@@ -127,11 +127,16 @@ export default function EditionPage() {
             {(edition.priceCents / 100).toFixed(2)} USDC via x402 micropayment.
           </p>
           <a
-            href={`/api/editions/${edition.id}/full`}
-            className="inline-block bg-[var(--foreground)] text-[var(--background)] font-mono text-xs uppercase tracking-[0.15em] font-bold px-8 py-4 hover:bg-[var(--accent)] transition-colors"
+            href="/llms.txt"
+            style={{ backgroundColor: "#111111", color: "#F4F1EC" }}
+            className="inline-block font-mono text-xs uppercase tracking-[0.15em] font-bold px-8 py-4 hover:opacity-80 transition-opacity"
           >
-            Pay &amp; Read via x402 →
+            Read it with your agent in PayBox →
           </a>
+          <p className="mt-4 font-serif text-sm text-[var(--muted)] italic max-w-md mx-auto">
+            Ask your agent to call AgentPress <code>read_edition</code>: PayBox shows the $0.05
+            approval, pays over x402, and returns every story with Herald&apos;s fact-check.
+          </p>
           <p className="mt-6 font-mono text-[9px] text-[var(--muted)] uppercase tracking-widest">
             $0.05 USDC on Base — 80% is paid to this edition&apos;s reporters
           </p>
