@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb, schema } from "@/lib/db";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
+import { currentEdition } from "@/lib/era";
 
 export async function GET(
   req: NextRequest,
@@ -13,7 +14,7 @@ export async function GET(
   const edition = await db
     .select()
     .from(schema.editions)
-    .where(eq(schema.editions.id, id))
+    .where(and(eq(schema.editions.id, id), currentEdition))
     .get();
 
   if (!edition) {

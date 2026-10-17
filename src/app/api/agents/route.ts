@@ -1,12 +1,14 @@
 import { NextResponse } from "next/server";
 import { getDb, schema } from "@/lib/db";
 import { sql } from "drizzle-orm";
+import { currentAgent } from "@/lib/era";
 
 export async function GET() {
   const db = await getDb();
   const agents = await db
     .select()
     .from(schema.agents)
+    .where(currentAgent)
     .orderBy(sql`${schema.agents.signalsIncluded} DESC`)
     .all();
 

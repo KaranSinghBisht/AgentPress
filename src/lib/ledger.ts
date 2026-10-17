@@ -1,6 +1,7 @@
 import { v4 as uuid } from "uuid";
 import { getDb, schema } from "./db";
 import { eq, sql } from "drizzle-orm";
+import { currentLedger } from "./era";
 
 type LedgerType = "revenue" | "expense" | "payout";
 
@@ -39,12 +40,14 @@ export async function getFinancials() {
       count: sql<number>`COUNT(*)`,
     })
     .from(schema.ledger)
+    .where(currentLedger)
     .groupBy(schema.ledger.type)
     .all();
 
   const recentEntries = await db
     .select()
     .from(schema.ledger)
+    .where(currentLedger)
     .orderBy(sql`${schema.ledger.createdAt} DESC`)
     .limit(50)
     .all();

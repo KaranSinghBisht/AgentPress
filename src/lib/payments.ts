@@ -1,7 +1,9 @@
+import { after } from "next/server";
 import { v4 as uuid } from "uuid";
 import { getDb, schema } from "./db";
 import { and, eq, sql } from "drizzle-orm";
 import { recordLedgerEntry } from "./ledger";
+import { currentPayment } from "./era";
 import { REVENUE_SPLIT } from "./constants";
 import { executePayouts } from "./payouts";
 
@@ -140,13 +142,14 @@ async function distributePayouts(
     }
   }
 
-  // Execute on-chain payouts (best-effort)
+  // On-chain payouts run after the response is sent (best-effort); the ledger
+  // entries above are the source of truth for what each reporter is owed.
   if (payoutTargets.length > 0) {
-    try {
-      await executePayouts(payoutTargets);
-    } catch {
-      // On-chain payouts are best-effort; ledger entries are the source of truth
-    }
+    after(() =>
+      executePayouts(payoutTargets).catch((error: unknown) =>
+        console.error("on-chain payouts failed:", error),
+      ),
+    );
   }
 }
 
@@ -171,6 +174,7 @@ export async function getPaymentRevenue(editionId?: string) {
       count: sql<number>`COUNT(*)`,
     })
     .from(schema.payments)
+    .where(currentPayment)
     .get();
   return { totalCents: result?.total ?? 0, count: result?.count ?? 0 };
 }

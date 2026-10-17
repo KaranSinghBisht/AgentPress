@@ -60,3 +60,5 @@ export const SIGNAL_LIMITS = {
   minTags: 1,
   maxTags: 10,
 } as const;
+
+export const FILING_FEE_CENTS = 1; // $0.01 x402 filing fee: anti-spam + proof of the payout wallet

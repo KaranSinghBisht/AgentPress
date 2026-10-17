@@ -74,3 +74,4 @@ Screenshot*.png
 
 # personal notes
 needscript.txt
+.env*

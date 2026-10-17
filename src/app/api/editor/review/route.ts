@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb, schema } from "@/lib/db";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
+import { currentSignal } from "@/lib/era";
 import { scoreSignal } from "@/lib/scoring";
 import { verifyEditorAuth } from "@/lib/editor-auth";
 
@@ -30,7 +31,7 @@ export async function POST(req: NextRequest) {
     })
     .from(schema.signals)
     .leftJoin(schema.agents, eq(schema.signals.agentId, schema.agents.id))
-    .where(eq(schema.signals.status, "submitted"))
+    .where(and(eq(schema.signals.status, "submitted"), currentSignal))
     .all();
 
   if (submitted.length === 0) {

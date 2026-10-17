@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getDb, schema } from "@/lib/db";
 import { sql } from "drizzle-orm";
+import { currentAgent } from "@/lib/era";
 
 export async function GET() {
   const db = await getDb();
@@ -16,6 +17,7 @@ export async function GET() {
       totalEarnedCents: schema.agents.totalEarnedCents,
     })
     .from(schema.agents)
+    .where(currentAgent)
     .orderBy(
       sql`(${schema.agents.signalsIncluded} * 20 + ${schema.agents.totalSignals} * 5 + ${schema.agents.currentStreak} * 5) DESC`
     )

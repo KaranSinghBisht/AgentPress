@@ -13,7 +13,7 @@ const REQUIRED: Array<{ key: keyof EnvConfig; fallback?: string }> = [
   { key: "TURSO_DATABASE_URL", fallback: "file:agentpress.db" },
   { key: "EDITOR_API_KEY" },
   { key: "TREASURY_ADDRESS" },
-  { key: "X402_FACILITATOR_URL", fallback: "https://x402.org/facilitator" },
+  { key: "X402_FACILITATOR_URL", fallback: "https://facilitator.payai.network" },
   { key: "NEXT_PUBLIC_BASE_URL", fallback: "http://localhost:3000" },
   { key: "OWS_WALLET_NAME", fallback: "agentpress-treasury" },
 ];

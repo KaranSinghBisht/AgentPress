@@ -6,6 +6,7 @@ import { eq, sql, and } from "drizzle-orm";
 import { BEATS, SIGNAL_LIMITS } from "@/lib/constants";
 import type { Beat } from "@/lib/constants";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { currentSignal } from "@/lib/era";
 
 export async function POST(req: NextRequest) {
   const limited = checkRateLimit(req, 10);
@@ -148,12 +149,12 @@ export async function GET(req: NextRequest) {
   const limit = Math.min(parseInt(searchParams.get("limit") || "50"), 100);
 
   const db = await getDb();
-  const conditions = [];
+  const conditions = [currentSignal];
   if (beat) conditions.push(eq(schema.signals.beat, beat));
   if (status) conditions.push(eq(schema.signals.status, status));
   if (agentId) conditions.push(eq(schema.signals.agentId, agentId));
 
-  const where = conditions.length > 0 ? and(...conditions) : undefined;
+  const where = and(...conditions);
 
   const signals = await db
     .select({

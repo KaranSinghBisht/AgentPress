@@ -1,8 +1,13 @@
 import { createWalletClient, createPublicClient, http, parseAbi } from "viem";
-import { baseSepolia } from "viem/chains";
+import { base, baseSepolia } from "viem/chains";
 import { privateKeyToAccount } from "viem/accounts";
 
-const USDC_BASE_SEPOLIA = "0x036CbD53842c5426634e7929541eC2318f3dCF7e";
+const MAINNET = (process.env.X402_NETWORK || "eip155:8453") === "eip155:8453";
+const CHAIN = MAINNET ? base : baseSepolia;
+const RPC_URL = MAINNET ? "https://mainnet.base.org" : "https://sepolia.base.org";
+const USDC = MAINNET
+  ? "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
+  : "0x036CbD53842c5426634e7929541eC2318f3dCF7e";
 const USDC_ABI = parseAbi([
   "function transfer(address to, uint256 amount) returns (bool)",
 ]);
@@ -29,12 +34,12 @@ export async function executePayouts(
   const account = privateKeyToAccount(privateKey as `0x${string}`);
   const walletClient = createWalletClient({
     account,
-    chain: baseSepolia,
-    transport: http("https://sepolia.base.org"),
+    chain: CHAIN,
+    transport: http(RPC_URL),
   });
   const publicClient = createPublicClient({
-    chain: baseSepolia,
-    transport: http("https://sepolia.base.org"),
+    chain: CHAIN,
+    transport: http(RPC_URL),
   });
 
   const results: PayoutResult[] = [];
@@ -50,7 +55,7 @@ export async function executePayouts(
       const amount = BigInt(payout.amountCents) * BigInt(10000);
 
       const txHash = await walletClient.writeContract({
-        address: USDC_BASE_SEPOLIA,
+        address: USDC,
         abi: USDC_ABI,
         functionName: "transfer",
         args: [payout.address as `0x${string}`, amount],
