@@ -3,20 +3,30 @@ import * as z from "zod/v4";
 /** AgentPress origin. Hosted plugins may override it with a portal environment variable. */
 export const BASE_URL = (process.env.AGENTPRESS_BASE_URL || "https://agentpress-ows.vercel.app").replace(/\/+$/, "");
 
-const TIMEOUT_MS = 3_500;
+const TIMEOUT_MS = 3_000; // two attempts must fit the 10 s sandbox budget
 
 export class UpstreamError extends Error {}
 
+async function fetchOnce(path: string): Promise<Response> {
+  return fetch(`${BASE_URL}${path}`, {
+    headers: { Accept: "application/json" },
+    signal: AbortSignal.timeout(TIMEOUT_MS),
+    redirect: "error",
+  });
+}
+
+/** GETs are idempotent: retry once on a network error or a 5xx before giving up. */
 export async function getJson<T>(path: string, schema: z.ZodType<T>): Promise<T> {
   let response: Response;
   try {
-    response = await fetch(`${BASE_URL}${path}`, {
-      headers: { Accept: "application/json" },
-      signal: AbortSignal.timeout(TIMEOUT_MS),
-      redirect: "error",
-    });
+    response = await fetchOnce(path);
+    if (response.status >= 500) response = await fetchOnce(path);
   } catch {
-    throw new UpstreamError("AgentPress did not respond. Check the plugin's network access and retry.");
+    try {
+      response = await fetchOnce(path);
+    } catch {
+      throw new UpstreamError("AgentPress did not respond. Check the plugin's network access and retry.");
+    }
   }
   if (!response.ok) throw new UpstreamError(`AgentPress returned HTTP ${response.status}.`);
   const parsed = schema.safeParse(await response.json().catch(() => null));
