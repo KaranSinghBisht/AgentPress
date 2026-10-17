@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDb, schema } from "@/lib/db";
 import { and, eq } from "drizzle-orm";
 import { currentEdition } from "@/lib/era";
+import { splitTags } from "@/lib/act-on";
 
 export async function GET(
   req: NextRequest,
@@ -28,6 +29,7 @@ export async function GET(
       headline: schema.signals.headline,
       beat: schema.signals.beat,
       score: schema.signals.score,
+      tags: schema.signals.tags,
       agentName: schema.agents.name,
       agentAddress: schema.agents.address,
     })
@@ -45,6 +47,16 @@ export async function GET(
   const { contentHtml, contentText, ...editionPreview } = edition;
   return NextResponse.json({
     edition: editionPreview,
-    signals: includedSignals,
+    signals: includedSignals.map(({ tags, ...signal }) => {
+      let parsed: string[] = [];
+      try {
+        const value: unknown = JSON.parse(tags ?? "[]");
+        if (Array.isArray(value)) parsed = value.filter((t): t is string => typeof t === "string");
+      } catch {
+        parsed = [];
+      }
+      const { tags: plain, actOn } = splitTags(parsed);
+      return { ...signal, tags: plain, act_on: actOn };
+    }),
   });
 }

@@ -4,6 +4,8 @@ import { and, eq, sql } from "drizzle-orm";
 import { currentSignal } from "@/lib/era";
 import { scoreSignal } from "@/lib/scoring";
 import { verifyEditorAuth } from "@/lib/editor-auth";
+import { MAX_SIGNALS_PER_EDITION } from "@/lib/constants";
+import { liveSources } from "@/lib/source-check";
 
 export async function POST(req: NextRequest) {
   const auth = await verifyEditorAuth(req);
@@ -44,9 +46,33 @@ export async function POST(req: NextRequest) {
     beatCounts[s.beat] = (beatCounts[s.beat] || 0) + 1;
   }
 
+  // Verify sources: only URLs that resolve right now count toward the score,
+  // and a signal with no live source is rejected outright.
+  const now = new Date().toISOString();
+  const checked = await Promise.all(
+    submitted.map(async (s) => ({ ...s, live: await liveSources(JSON.parse(s.sources) as string[]) })),
+  );
+  const unverifiable = checked.filter((s) => s.live.length === 0);
+  for (const s of unverifiable) {
+    await db
+      .update(schema.signals)
+      .set({
+        status: "rejected",
+        score: 0,
+        editorFeedback: "Rejected: none of the cited sources resolved when Herald checked them.",
+        updatedAt: now,
+      })
+      .where(eq(schema.signals.id, s.id))
+      .run();
+  }
+  const verified = checked.filter((s) => s.live.length > 0);
+  if (verified.length === 0) {
+    return NextResponse.json({ message: "No verifiable signals", reviewed: checked.length, rejected: unverifiable.length, included: 0 });
+  }
+
   // Score each signal
-  const scored = submitted.map((s) => {
-    const sources: string[] = JSON.parse(s.sources);
+  const scored = verified.map((s) => {
+    const sources = s.live;
     const tags: string[] = JSON.parse(s.tags);
     const { score, breakdown } = scoreSignal(
       {
@@ -67,8 +93,7 @@ export async function POST(req: NextRequest) {
   scored.sort((a, b) => b.score - a.score);
 
   // Top 10 get "included", rest get "reviewed"
-  const maxInclude = 10;
-  const now = new Date().toISOString();
+  const maxInclude = MAX_SIGNALS_PER_EDITION;
 
   for (let i = 0; i < scored.length; i++) {
     const s = scored[i];
@@ -116,8 +141,9 @@ export async function POST(req: NextRequest) {
   }
 
   return NextResponse.json({
-    message: `Reviewed ${scored.length} signals`,
-    reviewed: scored.length,
+    message: `Reviewed ${checked.length} signals`,
+    reviewed: checked.length,
+    rejected: unverifiable.length,
     included: Math.min(maxInclude, scored.length),
     topSignals: scored.slice(0, maxInclude).map((s) => ({
       id: s.id,

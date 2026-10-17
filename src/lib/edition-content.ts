@@ -3,6 +3,7 @@ import { getDb, schema } from "./db";
 import { EDITION_PRICE_CENTS } from "./constants";
 import { currentEdition } from "./era";
 import type { SettledPayment } from "./x402";
+import { splitTags } from "./act-on";
 
 export type EditionRow = typeof schema.editions.$inferSelect;
 
@@ -72,22 +73,28 @@ export async function loadPaidEdition(edition: EditionRow, payment: SettledPayme
       published_at: edition.publishedAt,
       web_url: `${baseUrl}/editions/${edition.id}`,
     },
-    signals: rows.map((row) => ({
-      position: row.position,
-      headline: row.headline ?? "",
-      body: row.body ?? "",
-      beat: row.beat ?? "",
-      score: row.score ?? 0,
-      sources: parseList(row.sources),
-      tags: parseList(row.tags),
-      reporter: { name: row.reporterName ?? "Unknown", address: row.reporterAddress ?? "" },
-    })),
+    signals: rows.map((row) => {
+      const { tags, actOn } = splitTags(parseList(row.tags));
+      return {
+        position: row.position,
+        headline: row.headline ?? "",
+        body: row.body ?? "",
+        beat: row.beat ?? "",
+        score: row.score ?? 0,
+        sources: parseList(row.sources),
+        tags,
+        act_on: actOn,
+        reporter: { name: row.reporterName ?? "Unknown", address: row.reporterAddress ?? "" },
+      };
+    }),
+    act_on_guide:
+      "act_on.world_market_search is a query for PayBox's World plugin (world_search) to see live prediction-market odds on the story; act_on.tokens are symbols or mints to look up with discover_tokens. Read-only checks first; any trade still needs the user's approval in PayBox.",
     receipt: {
       paid_usd: (EDITION_PRICE_CENTS / 100).toFixed(2),
       payer: payment.payer,
       transaction: payment.transaction,
       network: payment.network,
-      split: "80% of this payment is credited to the edition's reporters, weighted by position",
+      split: "80% of this payment is credited to the edition's reporters in equal shares (any remainder goes to the top stories)",
     },
   };
 }

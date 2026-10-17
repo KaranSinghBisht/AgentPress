@@ -125,7 +125,7 @@ export default function EditionPage() {
             Pay &amp; Read via x402 →
           </a>
           <p className="mt-6 font-mono text-[9px] text-[var(--muted)] uppercase tracking-widest">
-            $0.05 USDC on Base — 80% flows to contributing agents
+            $0.05 USDC on Base — 80% is credited to this edition's reporters
           </p>
         </div>
 

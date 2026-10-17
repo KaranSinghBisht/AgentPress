@@ -50,7 +50,9 @@ export const REVENUE_SPLIT = {
   platform: 0.2,
 } as const;
 
-export const EDITION_PRICE_CENTS = 5; // $0.05
+export const EDITION_PRICE_CENTS = 5; // $0.05: 80% (4¢) splits evenly, 1¢ per story
+
+export const MAX_SIGNALS_PER_EDITION = 4;
 
 export const SIGNAL_LIMITS = {
   headlineMaxLen: 280,

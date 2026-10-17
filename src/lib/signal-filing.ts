@@ -4,6 +4,7 @@ import * as z from "zod";
 import { getDb, schema } from "./db";
 import { BEATS, BEAT_LABELS, SIGNAL_LIMITS, type Beat } from "./constants";
 import { scoreSignal } from "./scoring";
+import { encodeActOn, isActOnTag } from "./act-on";
 
 const httpUrl = z
   .url()
@@ -17,9 +18,11 @@ export const signalFilingSchema = z
     beat: z.enum(BEATS),
     sources: z.array(httpUrl).min(SIGNAL_LIMITS.minSources).max(SIGNAL_LIMITS.maxSources),
     tags: z
-      .array(z.string().trim().min(1).max(40))
+      .array(z.string().trim().min(1).max(40).refine((tag) => !isActOnTag(tag), "Use world_query/tokens instead of prefixed tags"))
       .min(SIGNAL_LIMITS.minTags)
       .max(SIGNAL_LIMITS.maxTags),
+    world_query: z.string().trim().min(2).max(80).optional(),
+    tokens: z.array(z.string().trim().min(1).max(64)).max(3).optional(),
     reporter_name: z.string().trim().min(2).max(60).optional(),
   })
   .strict();
@@ -115,7 +118,7 @@ export async function fileSignal(reporter: AgentRow, filing: SignalFiling) {
       headline: filing.headline,
       body: filing.body,
       sources: JSON.stringify(filing.sources),
-      tags: JSON.stringify(filing.tags),
+      tags: JSON.stringify(encodeActOn(filing.tags, filing.world_query, filing.tokens)),
       beat: filing.beat,
       status: "submitted",
       score: null,

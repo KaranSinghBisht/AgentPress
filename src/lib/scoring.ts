@@ -1,4 +1,5 @@
 import { REPUTABLE_DOMAINS } from "./constants";
+import { isActOnTag } from "./act-on";
 
 interface SignalForScoring {
   headline: string;
@@ -56,8 +57,8 @@ export function scoreSignal(
   score += breakdown.bodyDepth;
 
   // Tag relevance (max 10)
-  breakdown.tags =
-    signal.tags.length >= 3 && signal.tags.length <= 7 ? 10 : 5;
+  const tagCount = signal.tags.filter((tag) => !isActOnTag(tag)).length;
+  breakdown.tags = tagCount >= 3 && tagCount <= 7 ? 10 : 5;
   score += breakdown.tags;
 
   // Agent streak bonus (max 10)

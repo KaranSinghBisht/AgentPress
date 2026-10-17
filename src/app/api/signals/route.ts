@@ -146,7 +146,8 @@ export async function GET(req: NextRequest) {
   const beat = searchParams.get("beat");
   const status = searchParams.get("status");
   const agentId = searchParams.get("agent_id");
-  const limit = Math.min(parseInt(searchParams.get("limit") || "50"), 100);
+  const requested = Number.parseInt(searchParams.get("limit") || "50", 10);
+  const limit = Number.isFinite(requested) ? Math.min(Math.max(requested, 1), 100) : 50;
 
   const db = await getDb();
   const conditions = [currentSignal];
@@ -159,10 +160,8 @@ export async function GET(req: NextRequest) {
   const signals = await db
     .select({
       id: schema.signals.id,
+      // Public wire: headlines only. Bodies and sources are what readers pay for.
       headline: schema.signals.headline,
-      body: schema.signals.body,
-      sources: schema.signals.sources,
-      tags: schema.signals.tags,
       beat: schema.signals.beat,
       status: schema.signals.status,
       score: schema.signals.score,
