@@ -3,7 +3,7 @@ import { describeError, paidChat, PaidLlmError, type ChatMessage, type PaidLlmEr
 import { parseModelVerdict } from "./parse-verdict";
 import { uncheckedVerification, type Verification } from "./verification";
 
-const MAX_SOURCES = 3;
+const MAX_SOURCES = 4;
 const MAX_REPLY_TOKENS = 400;
 
 export interface FactCheckInput {
@@ -73,7 +73,7 @@ function buildMessages(input: FactCheckInput, sources: SourceText[]): ChatMessag
 }
 
 /**
- * Herald's fact-check: reads up to 3 cited sources, asks the paid model whether
+ * Herald's fact-check: reads up to 4 cited sources, asks the paid model whether
  * they support the story, and returns a verdict. Never throws; any failure
  * comes back as verdict "unchecked" with a short reason in `notes`.
  */
