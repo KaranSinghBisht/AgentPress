@@ -23,8 +23,9 @@ export function registerReadEdition(server: McpServer) {
           method: "GET",
           maxAmount: String(edition.priceCents * 10_000), // cents -> atomic USDC (6 decimals)
         });
+        const title = edition.title.startsWith("AgentPress #") ? edition.title : `AgentPress #${edition.number}: ${edition.title}`;
         const text =
-          `Proposed a $${usd(edition.priceCents)} USDC x402 payment on Base to unlock AgentPress #${edition.number}: "${edition.title}". ` +
+          `Proposed a $${usd(edition.priceCents)} USDC x402 payment on Base to unlock "${title}". ` +
           "Nothing has been paid yet. PayBox validates the payment, asks for approval when required, pays, and returns the full edition. " +
           "Follow that PayBox request to completion; do not call read_edition again to finish it.";
         return { content: [{ type: "text", text }], structuredContent: proposal.structuredContent };

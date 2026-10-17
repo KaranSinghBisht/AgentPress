@@ -92,7 +92,7 @@ export function registerNewsroomWire(server: McpServer) {
             : "File a signal with file_signal.",
         };
         const text = [
-          `${data.stats.editions} editions, ${data.stats.reporters} reporters, ${data.stats.pending_signals} signals awaiting the editor.`,
+          `${data.stats.editions} edition(s), ${data.stats.reporters} reporter wallet(s), ${data.stats.pending_signals} story(ies) awaiting Herald.`,
           `Pending by beat: ${beats.map((b) => `${b.label} ${b.pending}`).join(", ")}.`,
           ...data.wire.map((w) => `- [${w.beat}] ${w.headline} (${w.reporter})`),
           data.tip,
