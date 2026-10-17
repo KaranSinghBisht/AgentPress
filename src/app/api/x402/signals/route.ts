@@ -45,6 +45,7 @@ export const POST = withSettledPayment<SignalFiling>(
       amountCents: FILING_FEE_CENTS,
       description: "x402 signal filing fee",
       fromAddress: payment.payer,
+      toAddress: process.env.TREASURY_ADDRESS,
       txHash: payment.transaction,
     }).catch((error: unknown) => console.error("filing fee ledger write failed:", error));
 

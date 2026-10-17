@@ -36,19 +36,21 @@ export function cleanBrief(text: string): string {
   return lastStop > 0 ? cut.slice(0, lastStop + 1) : `${cut.slice(0, BRIEF_MAX_CHARS - 1).trimEnd()}…`;
 }
 
-/** Herald's paid editor's brief for an edition, or null (logged) when it cannot be written. */
-export async function editorsBrief(stories: BriefStory[]): Promise<string | null> {
-  if (stories.length === 0) return null;
+export interface EditorsBrief {
+  brief: string | null;
+  costAtomic: string | null;
+}
+
+/** Herald's paid editor's brief for an edition (null, logged, when it cannot be written) and its cost. */
+export async function editorsBrief(stories: BriefStory[]): Promise<EditorsBrief> {
+  if (stories.length === 0) return { brief: null, costAtomic: null };
   try {
     const reply = await paidChat(buildMessages(stories), { maxTokens: 200 });
     const brief = cleanBrief(reply.text);
-    if (!brief) {
-      console.error("Herald's editor's brief came back empty; keeping the compiled summary.");
-      return null;
-    }
-    return brief;
+    if (!brief) console.error("Herald's editor's brief came back empty; keeping the compiled summary.");
+    return { brief: brief || null, costAtomic: reply.costAtomic };
   } catch (error) {
     console.error("Herald could not write the editor's brief:", describeError(error));
-    return null;
+    return { brief: null, costAtomic: null };
   }
 }

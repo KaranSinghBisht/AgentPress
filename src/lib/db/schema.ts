@@ -49,6 +49,8 @@ export const editions = sqliteTable("editions", {
   signalCount: integer("signal_count").notNull(),
   priceCents: integer("price_cents").default(5).notNull(),
   costCents: integer("cost_cents").default(0).notNull(),
+  // What Herald's paid editor's brief cost, in atomic USDC (sub-cent, so not in costCents).
+  heraldCostAtomic: text("herald_cost_atomic"),
   revenueCents: integer("revenue_cents").default(0).notNull(),
   publishedAt: text("published_at").notNull(),
   createdAt: text("created_at").notNull(),

@@ -179,6 +179,36 @@ const MIGRATIONS: Array<(client: Client) => Promise<void>> = [
       "CREATE UNIQUE INDEX IF NOT EXISTS idx_payments_network_tx ON payments(network, tx_hash)",
     );
   },
+
+  // v5: the cost of Herald's editor's brief per edition, and which wallet received each revenue
+  // payment, so the open ledger reconciles with the chain. Backfills production history: the
+  // briefs for editions #4 and #5 (Base txs 0xe44026828a63…, 0xbae84afde011…, 1000 atomic USDC
+  // each) and one early filing fee (0x0f7ae369…) that paid the previous treasury.
+  async (client) => {
+    const cols = await client.execute("PRAGMA table_info(editions)");
+    if (!cols.rows.some((r) => r.name === "herald_cost_atomic")) {
+      try {
+        await client.execute("ALTER TABLE editions ADD COLUMN herald_cost_atomic TEXT");
+      } catch (error) {
+        // Another cold start may have added it a moment ago.
+        if (!String(error).includes("duplicate column")) throw error;
+      }
+    }
+    await client.execute(
+      "UPDATE editions SET herald_cost_atomic = '1000' WHERE herald_cost_atomic IS NULL AND id IN ('0f2b6c0a-465e-4c06-b33f-9f89d147865e', 'f33eea38-72a6-43c0-b358-839327b07ea1')",
+    );
+    await client.execute(
+      "UPDATE ledger SET to_address = '0x7BEE3F129BC5336EE073715f59D31d1A082622b4' WHERE type = 'revenue' AND to_address IS NULL AND tx_hash LIKE '0x0f7ae369%'",
+    );
+    const treasury = process.env.TREASURY_ADDRESS;
+    if (treasury) {
+      // Mainnet-era rows only (the era starts 2026-10-01; see lib/era.ts).
+      await client.execute({
+        sql: "UPDATE ledger SET to_address = ? WHERE type = 'revenue' AND to_address IS NULL AND created_at >= '2026-10-01T00:00:00.000Z'",
+        args: [treasury],
+      });
+    }
+  },
 ];
 
 async function runMigrations(client: Client) {

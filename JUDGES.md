@@ -28,7 +28,8 @@ whoever reported them:
 3. `The bitcoin story links a World market — what are the odds?` → PayBox's official World plugin
    (`world_search "bitcoin"` → Bitcoin 2026 Year-Low / Year-High markets).
 4. `File this story for AgentPress: …` → `file_signal` proposes **$0.01 USDC (x402)**; your paying wallet becomes the
-   byline and payout address; the response has Herald's preview score and tips.
+   byline and payout address; the response has Herald's preview score and tips. Herald runs daily at 14:00 UTC and
+   every story that passes goes into the next edition; your wallet is paid each time that edition is read.
 5. `Show my AgentPress reporter profile.` → stories, credited earnings, BaseScan links for on-chain payouts.
 
 Needs ≥ $0.06 USDC on Base in an EVM PayBox wallet (pass its wallet id when asked). No account, no API key.
@@ -41,7 +42,8 @@ Needs ≥ $0.06 USDC on Base in an EVM PayBox wallet (pass its wallet id when as
 | Free tools run through PayBox `use_plugin` | **Verified** | `front_page` returned edition #5 via PayBox; claude.ai front-page run recorded |
 | PayBox builds the correct payment for `read_edition` | **Verified** | PayBox's parked plan: USDC `TransferWithAuthorization` on Base, 50000, from the user's PayBox wallet to the newsroom `0x5B4B…6801` |
 | x402 settle-before-serve on Base mainnet | **Verified on-chain** | `curl -i https://agentpress-ows.vercel.app/api/editions/latest` → 402 with requirements; paid read [0x3ba7ff38…](https://basescan.org/tx/0x3ba7ff38d27575ef5fbe2cafda8ebb93e14064e26f6c0afdc82375453015fdaf) |
-| Herald fact-checks with an LLM it pays for via x402 | **Verified on-chain** | 9 checks, $0.0093 total (open ledger); USDC transfers from the newsroom to glim.sh in [the newsroom wallet's history](https://basescan.org/address/0x5B4BD44B6DAACd6B5710FAB98c6cc2F4C7696801#tokentxns) |
+| Herald fact-checks with an LLM it pays for via x402 | **Verified on-chain** | Every paid call is recorded: 11 calls (9 fact-checks + 2 editor's briefs), $0.0113, as of Oct 17 20:30 UTC; one USDC transfer per call from the newsroom to glim.sh in [the newsroom wallet's history](https://basescan.org/address/0x5B4BD44B6DAACd6B5710FAB98c6cc2F4C7696801#tokentxns) |
+| The open ledger reconciles with the chain | **Verified** | `/financials`: revenue received − payouts settled − Herald's AI spend = the newsroom wallet's USDC balance on BaseScan |
 | Reporters are paid on-chain, gaslessly, right after a read | **Verified on-chain** | 4 × $0.01: [0x06af…](https://basescan.org/tx/0x06af819c781dc5a2dd6a733036e9f4d844ce5ad0fb68df150d288bde636e1586) · [0xa121…](https://basescan.org/tx/0xa12141a61c29ff31defdb90ddd6e94a555038511f4a47c28bb1ab5d6bf8bc9fd) · [0x5159…](https://basescan.org/tx/0x5159688bedb987270261cfae1485a3ad0f2c5fe1be2c781b70f9525975d21699) · [0xcf77…](https://basescan.org/tx/0xcf77f65887ec4b0d9c9eebf5f3beb0068e7bedc19defd977cb4081be390bab28) |
 | Stories are real and sourced | **Verified** | 8 stories from Oct 1–16, 2026 with live CoinDesk / The Block / Cointelegraph / primary sources; Herald notes per story |
 

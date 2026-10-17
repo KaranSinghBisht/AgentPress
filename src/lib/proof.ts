@@ -1,11 +1,12 @@
 import { and, eq, isNotNull, sql } from "drizzle-orm";
 import { getDb, schema } from "./db";
-import { currentAgent, currentLedger, currentPayment, currentSignal } from "./era";
+import { currentAgent, currentEdition, currentLedger, currentPayment, currentSignal } from "./era";
 
 export interface ProofStats {
   distinct_payer_wallets: number;
   reporter_wallets: number;
   herald_checks: number;
+  herald_briefs: number;
   herald_ai_spend_usd: string;
   paid_onchain_usd: string;
   newsroom_wallet: string;
@@ -30,8 +31,8 @@ async function distinctPayers(): Promise<number> {
   return wallets.size;
 }
 
-/** Herald's paid fact-checks, summed from the receipts stored on each verification. */
-async function heraldSpend(): Promise<{ checks: number; atomic: bigint }> {
+/** Herald's paid AI calls: fact-check receipts on each verification plus each edition's brief. */
+async function heraldSpend(): Promise<{ checks: number; briefs: number; atomic: bigint }> {
   const db = await getDb();
   const rows = await db
     .select({ verification: schema.signals.verification })
@@ -49,7 +50,18 @@ async function heraldSpend(): Promise<{ checks: number; atomic: bigint }> {
       // A malformed verification is simply not counted.
     }
   }
-  return { checks, atomic };
+  const editions = await db
+    .select({ cost: schema.editions.heraldCostAtomic })
+    .from(schema.editions)
+    .where(and(isNotNull(schema.editions.heraldCostAtomic), currentEdition))
+    .all();
+  let briefs = 0;
+  for (const edition of editions) {
+    if (!edition.cost || !/^\d+$/.test(edition.cost)) continue;
+    briefs += 1;
+    atomic += BigInt(edition.cost);
+  }
+  return { checks, briefs, atomic };
 }
 
 export async function getProofStats(): Promise<ProofStats> {
@@ -69,6 +81,7 @@ export async function getProofStats(): Promise<ProofStats> {
     distinct_payer_wallets: payers,
     reporter_wallets: Number(reporters?.n ?? 0),
     herald_checks: herald.checks,
+    herald_briefs: herald.briefs,
     herald_ai_spend_usd: (Number(herald.atomic) / 1_000_000).toFixed(4),
     paid_onchain_usd: (Number(paid?.cents ?? 0) / 100).toFixed(2),
     newsroom_wallet: wallet,

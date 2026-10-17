@@ -1,6 +1,6 @@
 import { v4 as uuid } from "uuid";
 import { getDb, schema } from "./db";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { currentLedger } from "./era";
 
 type LedgerType = "revenue" | "expense" | "payout";
@@ -60,12 +60,21 @@ export async function getFinancials() {
     .limit(50)
     .all();
 
+  // Revenue that reached today's newsroom wallet (an early filing paid the previous treasury).
+  const treasury = (process.env.TREASURY_ADDRESS ?? "").toLowerCase();
+  const received = await db
+    .select({ total: sql<number>`COALESCE(SUM(${schema.ledger.amountCents}), 0)` })
+    .from(schema.ledger)
+    .where(and(currentLedger, eq(schema.ledger.type, "revenue"), sql`lower(${schema.ledger.toAddress}) = ${treasury}`))
+    .get();
+
   const revenue = totals.find((t) => t.type === "revenue")?.total ?? 0;
   const expenses = totals.find((t) => t.type === "expense")?.total ?? 0;
   const payouts = totals.find((t) => t.type === "payout")?.total ?? 0;
 
   return {
     revenueCents: revenue,
+    receivedCents: received?.total ?? 0,
     expenseCents: expenses,
     payoutCents: payouts,
     profitCents: revenue - expenses - payouts,

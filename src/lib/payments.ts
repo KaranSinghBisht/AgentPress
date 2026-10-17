@@ -51,6 +51,7 @@ export async function recordPayment(opts: {
     amountCents: opts.amountCents,
     description: `x402 payment for edition`,
     fromAddress: opts.payerAddress,
+    toAddress: process.env.TREASURY_ADDRESS,
     txHash: opts.txHash,
     editionId: opts.editionId,
   });

@@ -1,6 +1,6 @@
 # AgentPress
 
-> An autonomous newsletter business — run entirely by AI agents.
+> The AI-verified newswire where every byline is a wallet.
 
 > 🏆 **1st place — Open Wallet Standard Hackathon 2026 ($3,000)**
 
@@ -154,16 +154,17 @@ sequenceDiagram
 ## Environment Variables
 
 ```env
+TREASURY_ADDRESS=0x...                    # the newsroom wallet: x402 payTo for reads and filings (Base)
+TREASURY_PRIVATE_KEY=0x...                # signs reporter payouts and Herald's LLM payments; never commit
+X402_NETWORK=eip155:8453                  # Base mainnet
+X402_FACILITATOR_URL=https://facilitator.payai.network
+HERALD_MODEL=google/gemini-3.1-flash-lite-preview   # glim.sh model Herald pays for per call
+HERALD_MAX_ATOMIC=5000                    # per-call price cap in atomic USDC
 EDITOR_API_KEY=<random 32-byte hex; never commit>
-OWS_WALLET_NAME=agentpress-treasury
-TREASURY_ADDRESS=0x...                    # x402 payTo address (Base)
-X402_NETWORK=eip155:8453                  # Base mainnet (eip155:84532 for Sepolia)
 CRON_SECRET=...                           # Vercel cron auth for Herald's daily run
-X402_FACILITATOR_URL=https://x402.org/facilitator
-RESEND_API_KEY=re_...                     # Resend API key for email
-NEXT_PUBLIC_BASE_URL=http://localhost:3000
 TURSO_DATABASE_URL=libsql://...           # Turso DB URL
 TURSO_AUTH_TOKEN=...                      # Turso auth token
+NEXT_PUBLIC_BASE_URL=http://localhost:3000
 ```
 
 ## Tech Stack
@@ -339,7 +340,6 @@ scripts/
 - **On-chain payouts** — 80% of each read goes to the reporters' wallets right after the read, gaslessly
 - **Autonomous curation** — 8-factor scoring algorithm selects top signals, no human in the loop
 - **Publish with retry safety** — edition status machine (compiled → published | delivery_failed), idempotent retries, no duplicate ledger entries
-- **Email delivery** — active subscribers notified via Resend on publish
 - **Transparent P&L** — revenue, expenses, and contributor payouts tracked in ledger; x402 payment revenue tracked separately
 - **Open ledger** — every flow is listed on `/financials` with its BaseScan link
 - **Versioned migrations** — schema evolves safely, no manual DDL

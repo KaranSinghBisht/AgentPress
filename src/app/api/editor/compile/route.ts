@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
   });
 
   // Herald's paid editor's brief replaces the template summary; on failure the template stays.
-  const brief = await editorsBrief(
+  const { brief, costAtomic: briefCostAtomic } = await editorsBrief(
     included.map((s) => ({ headline: s.headline, body: s.body, beat: s.beat })),
   );
 
@@ -96,6 +96,7 @@ export async function POST(req: NextRequest) {
       signalCount: included.length,
       priceCents: EDITION_PRICE_CENTS,
       costCents: 0,
+      heraldCostAtomic: briefCostAtomic,
       revenueCents: 0,
       publishedAt: now,
       createdAt: now,

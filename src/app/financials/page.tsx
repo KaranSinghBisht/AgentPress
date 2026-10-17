@@ -19,6 +19,7 @@ interface Proof {
   distinct_payer_wallets: number;
   reporter_wallets: number;
   herald_checks: number;
+  herald_briefs?: number;
   herald_ai_spend_usd: string;
   paid_onchain_usd: string;
   newsroom_wallet: string;
@@ -27,6 +28,7 @@ interface Proof {
 
 interface Financials {
   revenueCents: number;
+  receivedCents?: number;
   expenseCents: number;
   payoutCents: number;
   profitCents: number;
@@ -110,6 +112,8 @@ export default function FinancialsPage() {
   }, []);
 
   const revenueUsd = (data?.revenueCents ?? 0) / 100;
+  const receivedUsd = (data?.receivedCents ?? data?.revenueCents ?? 0) / 100;
+  const elsewhereCents = (data?.revenueCents ?? 0) - (data?.receivedCents ?? data?.revenueCents ?? 0);
   // Settled on Base (payout rows with a tx hash), not just credited.
   const payoutUsd = Number(data?.proof?.paid_onchain_usd ?? (data?.payoutCents ?? 0) / 100);
   const costUsd = (data?.expenseCents ?? 0) / 100 + Number(data?.proof?.herald_ai_spend_usd ?? 0);
@@ -117,7 +121,10 @@ export default function FinancialsPage() {
     {
       label: "REVENUE",
       value: loading ? null : usd(revenueUsd),
-      note: "x402 reads and filing fees received",
+      note:
+        elsewhereCents > 0
+          ? `x402 reads and filing fees · ${centsToDisplay(elsewhereCents)} went to an earlier treasury`
+          : "x402 reads and filing fees received",
     },
     {
       label: "PAID TO REPORTERS",
@@ -127,11 +134,11 @@ export default function FinancialsPage() {
     {
       label: "COSTS (HERALD AI)",
       value: loading ? null : usd(costUsd),
-      note: "Fact-checks paid per call via x402",
+      note: "Fact-checks and briefs, paid per call via x402",
     },
     {
       label: "NEWSROOM NET",
-      value: loading ? null : usd(revenueUsd - payoutUsd - costUsd),
+      value: loading ? null : usd(receivedUsd - payoutUsd - costUsd),
       note: "Left in the newsroom wallet",
     },
   ];
@@ -172,7 +179,7 @@ export default function FinancialsPage() {
               {[
                 ["Distinct paying wallets", String(data.proof.distinct_payer_wallets)],
                 ["Paid to reporters on-chain", `$${data.proof.paid_onchain_usd}`],
-                ["Herald AI fact-checks", `${data.proof.herald_checks} · $${data.proof.herald_ai_spend_usd}`],
+                ["Herald paid AI calls", `${data.proof.herald_checks + (data.proof.herald_briefs ?? 0)} · $${data.proof.herald_ai_spend_usd}`],
                 ["Reporter wallets", String(data.proof.reporter_wallets)],
               ].map(([label, value]) => (
                 <div key={label} className="p-4 border-r-2 last:border-r-0 border-[var(--border)]">
