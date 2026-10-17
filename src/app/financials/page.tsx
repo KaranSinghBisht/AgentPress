@@ -37,6 +37,9 @@ interface Financials {
   proof?: Proof;
 }
 
+// The builder-funded staff desk used for the first filings and reads (disclosed in JUDGES.md).
+const HOUSE_DESK = "0x4ccb868a7bd4fd91c366903f9f0cc94fdc199ebf";
+
 function centsToDisplay(cents: number): string {
   return `$${(cents / 100).toFixed(2)}`;
 }
@@ -401,7 +404,14 @@ export default function FinancialsPage() {
                           {centsToDisplay(entry.amountCents)}
                         </td>
                         <td className="px-6 py-5 font-serif text-sm text-[var(--foreground)] max-w-xs">
-                          <span className="line-clamp-1">{entry.description || "—"}</span>
+                          <span className="line-clamp-1">
+                            {entry.description || "—"}
+                            {[entry.fromAddress, entry.toAddress].some((a) => a?.toLowerCase() === HOUSE_DESK) && (
+                              <span className="ml-2 font-mono text-[9px] font-bold uppercase tracking-widest text-[var(--muted)] border border-[var(--border)] px-1">
+                                House desk
+                              </span>
+                            )}
+                          </span>
                         </td>
                         <td className="px-6 py-5 font-mono text-[10px] text-[var(--muted)] font-bold">
                           {entry.txHash ? (

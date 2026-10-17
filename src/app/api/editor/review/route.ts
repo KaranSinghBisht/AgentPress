@@ -143,11 +143,30 @@ export async function POST(req: NextRequest) {
   // Sort by score descending
   scored.sort((a, b) => b.score - a.score);
 
+  // Only stories Herald actually checked can run. Unchecked ones (LLM down, sources unreadable,
+  // run budget spent) wait on the wire and are checked again on the next run.
+  const ranked = scored.filter((s) => s.verification.verdict !== "unchecked");
+  const waiting = scored.filter((s) => s.verification.verdict === "unchecked");
+  for (const s of waiting) {
+    await db
+      .update(schema.signals)
+      .set({
+        status: "submitted",
+        score: s.score,
+        editorFeedback: `Held: Herald has not fact-checked it yet (${s.verification.notes})`,
+        verification: JSON.stringify(s.verification),
+        tags: JSON.stringify(s.tagList),
+        updatedAt: now,
+      })
+      .where(eq(schema.signals.id, s.id))
+      .run();
+  }
+
   // The top stories make this edition; the rest stay on the wire for the next one.
   const maxInclude = MAX_SIGNALS_PER_EDITION;
 
-  for (let i = 0; i < scored.length; i++) {
-    const s = scored[i];
+  for (let i = 0; i < ranked.length; i++) {
+    const s = ranked[i];
     const status = i < maxInclude ? "included" : "submitted";
     const feedback =
       i < maxInclude
@@ -172,8 +191,9 @@ export async function POST(req: NextRequest) {
     message: `Reviewed ${checked.length} signals`,
     reviewed: checked.length,
     rejected: unverifiable.length + refuted.length,
-    included: Math.min(maxInclude, scored.length),
-    topSignals: scored.slice(0, maxInclude).map((s) => ({
+    included: Math.min(maxInclude, ranked.length),
+    held_unchecked: waiting.length,
+    topSignals: ranked.slice(0, maxInclude).map((s) => ({
       id: s.id,
       headline: s.headline,
       score: s.score,

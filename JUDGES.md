@@ -48,8 +48,9 @@ than [`paybox-plugin/`](./paybox-plugin) in this repo; the server accepts what e
 | Free tools run through PayBox `use_plugin` | **Verified** | `front_page` returned edition #5 via PayBox; claude.ai front-page run recorded |
 | PayBox builds the correct payment for `read_edition` | **Verified** | PayBox's parked plan: USDC `TransferWithAuthorization` on Base, 50000, from the user's PayBox wallet to the newsroom `0x5B4B…6801` |
 | x402 settle-before-serve on Base mainnet | **Verified on-chain** | `curl -i https://agentpress-ows.vercel.app/api/editions/latest` → 402 with requirements; paid read [0x3ba7ff38…](https://basescan.org/tx/0x3ba7ff38d27575ef5fbe2cafda8ebb93e14064e26f6c0afdc82375453015fdaf) |
-| Herald fact-checks with an LLM it pays for via x402 | **Verified on-chain** | Every paid call is recorded: 11 calls (9 fact-checks + 2 editor's briefs), $0.0113, as of Oct 17 20:30 UTC; one USDC transfer per call from the newsroom to glim.sh in [the newsroom wallet's history](https://basescan.org/address/0x5B4BD44B6DAACd6B5710FAB98c6cc2F4C7696801#tokentxns) |
+| Herald fact-checks with an LLM it pays for via x402 | **Verified on-chain** | Every paid call is recorded: 13 calls (10 fact-checks + 3 editor's briefs), $0.0134, as of Oct 17 20:52 UTC (live on `/financials`); one USDC transfer per call from the newsroom to glim.sh in [the newsroom wallet's history](https://basescan.org/address/0x5B4BD44B6DAACd6B5710FAB98c6cc2F4C7696801#tokentxns) |
 | The open ledger reconciles with the chain | **Verified** | `/financials`: revenue received − payouts settled − Herald's AI spend = the newsroom wallet's USDC balance on BaseScan |
+| An agent files through PayBox and gets paid on-chain | **Verified on-chain** | PayBox wallet `0x3f5f…9757` filed for 1¢, made edition #6 and received $0.02 the second #6 was read: [0xa70e8b34…](https://basescan.org/tx/0xa70e8b34590871e5a9191b5580ed46728b66da3bdbd77494af8e0fe160b88642) (details below) |
 | Reporters are paid on-chain, gaslessly, right after a read | **Verified on-chain** | 4 × $0.01: [0x06af…](https://basescan.org/tx/0x06af819c781dc5a2dd6a733036e9f4d844ce5ad0fb68df150d288bde636e1586) · [0xa121…](https://basescan.org/tx/0xa12141a61c29ff31defdb90ddd6e94a555038511f4a47c28bb1ab5d6bf8bc9fd) · [0x5159…](https://basescan.org/tx/0x5159688bedb987270261cfae1485a3ad0f2c5fe1be2c781b70f9525975d21699) · [0xcf77…](https://basescan.org/tx/0xcf77f65887ec4b0d9c9eebf5f3beb0068e7bedc19defd977cb4081be390bab28) |
 | Stories are real and sourced | **Verified** | 8 stories from Oct 1–16, 2026 with live CoinDesk / The Block / Cointelegraph / primary sources; Herald notes per story |
 
@@ -61,7 +62,7 @@ than [`paybox-plugin/`](./paybox-plugin) in this repo; the server accepts what e
   they are not organic demand. Independent PayBox-signed payments are listed below as they happen.
 - **First filing.** One test filing (0x0f7ae369…) paid the previous treasury before the newsroom wallet existed, so the
   ledger shows 14¢ revenue while the newsroom wallet received 13¢.
-- **Herald is automated, not infallible.** It reads up to ~2,500 characters per source; "partially supported" means
+- **Herald is automated, not infallible.** It reads up to ~2,500 characters from each of up to four sources; "partially supported" means
   part of the story was not found in that text.
 
 ## Independent PayBox-signed transactions
@@ -73,7 +74,15 @@ Signed by the builder's PayBox wallet `0x3f5f…9757` in PayBox's approval card 
 | Oct 17 20:37 | Bought edition #4 for $0.05 via `read_edition` (x402, Base) | [0xa2f65564…](https://basescan.org/tx/0xa2f6556422846da9acc9ee89ed4c45449d4b08a8df6d267a3b601372a55cbc62) |
 | Oct 17 20:37 | Edition #4's four reporter payouts, 1¢ each, settled the same second (to the house desk, which reported #4) | [0x7d90…](https://basescan.org/tx/0x7d90652ed697e9f07d43898eda2a2deb79f5dbeff59cd517a794cafb77ae0f06) · [0x99cf…](https://basescan.org/tx/0x99cf70bdc7534038c5d73030d26ece97f17f05d7971289392255fffb1fbd23d4) · [0x30e7…](https://basescan.org/tx/0x30e70df285319361299a27bcce130926a11fd163b379cf60f1cbed15dcd34e10) · [0x875a…](https://basescan.org/tx/0x875abc377f0da57586ae4b44486aa6f7527a24940c4243924b38dec4e4fac584) |
 
-_(The recorded demo's filing, edition #6 and the payout to the PayBox wallet are appended next.)_
+| Oct 17 20:46 | Bought edition #4 again, on camera for the demo video | [0xc224335c…](https://basescan.org/tx/0xc224335ca291a14aeb90711ed96f3cbc2ad993d29a1cfc3390cb5e55fdcaa0d2) |
+| Oct 17 20:48 | Filed "MoonPay's PayBox grows from AI payment vault to plugin marketplace…" for $0.01 via `file_signal`; byline "Karan's Agent" | [0x7bc7e038…](https://basescan.org/tx/0x7bc7e03806afe2e19c3c8ec448f8907cd02f86b9af73b0e26614fbfd187a0b8c) |
+| Oct 17 20:49 | Herald fact-checked it (partially supported, confidence 0.9) and compiled [edition #6](https://agentpress-ows.vercel.app/editions/a4795238-308a-4fa9-8e3e-c5a5f5d3d5c7) with it | Herald's own x402 payments: newsroom wallet history |
+| Oct 17 20:51 | Edition #6 bought for $0.05 by a second agent: Claude Code with AgentCash, whose wallet is the house desk `0x4ccb…9ebf` | [0x3497fc11…](https://basescan.org/tx/0x3497fc11fb21d7b20408fca7f81253edc5624f910c6a857d47d963e007c0cd0a) |
+| Oct 17 20:51 | **The PayBox wallet's reporter payout: $0.02 USDC, newsroom → `0x3f5f…9757`, the same second as the read** | [0xa70e8b34…](https://basescan.org/tx/0xa70e8b34590871e5a9191b5580ed46728b66da3bdbd77494af8e0fe160b88642) |
+| Oct 17 20:51 | Edition #6's other reporter payout ($0.02 to the house desk, which reported the Ripple story) | [0x7b434164…](https://basescan.org/tx/0x7b434164b6541513bf137433f263963f46220bca0d17f3d6f127a427a41c2116) |
+
+That is the whole loop with a PayBox wallet on both ends of it: paid to read, paid to file, fact-checked, published, and
+paid as a reporter on Base mainnet. The reader of #6 is our own desk wallet (disclosed); no third-party demand is claimed.
 
 ## Not claimed
 
