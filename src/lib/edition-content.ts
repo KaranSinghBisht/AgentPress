@@ -4,6 +4,7 @@ import { EDITION_PRICE_CENTS } from "./constants";
 import { currentEdition } from "./era";
 import type { SettledPayment } from "./x402";
 import { splitTags } from "./act-on";
+import { retryRead } from "./db/retry";
 import { readVerification } from "./herald/verification";
 
 export type EditionRow = typeof schema.editions.$inferSelect;
@@ -11,23 +12,23 @@ export type EditionRow = typeof schema.editions.$inferSelect;
 export async function findEditionById(id: string): Promise<EditionRow | null> {
   if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
   const db = await getDb();
-  const edition = await db
+  const edition = await retryRead(() => db
     .select()
     .from(schema.editions)
     .where(and(eq(schema.editions.id, id), currentEdition))
-    .get();
+    .get());
   return edition ?? null;
 }
 
 export async function findLatestEdition(): Promise<EditionRow | null> {
   const db = await getDb();
-  const edition = await db
+  const edition = await retryRead(() => db
     .select()
     .from(schema.editions)
     .where(currentEdition)
     .orderBy(sql`${schema.editions.number} DESC`)
     .limit(1)
-    .get();
+    .get());
   return edition ?? null;
 }
 
@@ -49,7 +50,7 @@ export async function loadPaidEdition(
   payment: SettledPayment,
 ) {
   const db = await getDb();
-  const rows = await db
+  const rows = await retryRead(() => db
     .select({
       position: schema.editionSignals.position,
       headline: schema.signals.headline,
@@ -70,7 +71,7 @@ export async function loadPaidEdition(
     .leftJoin(schema.agents, eq(schema.signals.agentId, schema.agents.id))
     .where(eq(schema.editionSignals.editionId, edition.id))
     .orderBy(schema.editionSignals.position)
-    .all();
+    .all());
 
   const baseUrl =
     process.env.NEXT_PUBLIC_BASE_URL || "https://agentpress-ows.vercel.app";

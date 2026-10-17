@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { retryRead } from "@/lib/db/retry";
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { getDb, schema } from "@/lib/db";
 import { currentAgent, currentLedger, currentSignal } from "@/lib/era";
@@ -6,7 +7,7 @@ import { currentAgent, currentLedger, currentSignal } from "@/lib/era";
 const usd = (cents: number) => (cents / 100).toFixed(2);
 
 /** A reporter wallet's public record: stories, credited earnings and on-chain payouts. */
-export async function GET(_req: NextRequest, { params }: { params: Promise<{ address: string }> }) {
+async function readOnlyGET(_req: NextRequest, { params }: { params: Promise<{ address: string }> }) {
   const { address } = await params;
   if (!/^0x[0-9a-fA-F]{40}$/.test(address)) {
     return NextResponse.json({ error: "address must be a 0x EVM address" }, { status: 400 });
@@ -66,4 +67,9 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ add
     })),
     recent_signals: signals,
   });
+}
+
+/** Read-only handler: retried once on a transient DB failure. */
+export async function GET(...args: Parameters<typeof readOnlyGET>) {
+  return retryRead(() => readOnlyGET(...args));
 }

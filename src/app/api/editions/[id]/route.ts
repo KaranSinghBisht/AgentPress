@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
+import { retryRead } from "@/lib/db/retry";
 import { getDb, schema } from "@/lib/db";
 import { and, eq } from "drizzle-orm";
 import { currentEdition } from "@/lib/era";
 import { splitTags } from "@/lib/act-on";
 import { readVerification } from "@/lib/herald/verification";
 
-export async function GET(
+async function readOnlyGET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
@@ -64,4 +65,9 @@ export async function GET(
       return { ...signal, tags: plain, act_on: actOn, verdict };
     }),
   });
+}
+
+/** Read-only handler: retried once on a transient DB failure. */
+export async function GET(...args: Parameters<typeof readOnlyGET>) {
+  return retryRead(() => readOnlyGET(...args));
 }

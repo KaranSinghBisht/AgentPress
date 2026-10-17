@@ -1,7 +1,6 @@
 import { createClient, type Client } from "@libsql/client";
 import { drizzle } from "drizzle-orm/libsql";
 import * as schema from "./schema";
-import { resilientFetch } from "./resilient-fetch";
 
 type DbClient = Awaited<ReturnType<typeof drizzle<typeof schema>>>;
 
@@ -11,7 +10,6 @@ async function initDb(): Promise<DbClient> {
   const client = createClient({
     url: process.env.TURSO_DATABASE_URL || "file:agentpress.db",
     authToken: process.env.TURSO_AUTH_TOKEN,
-    fetch: resilientFetch,
   });
 
   await runMigrations(client);

@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
+import { retryRead } from "@/lib/db/retry";
 import { getDb, schema } from "@/lib/db";
 import { and, sql } from "drizzle-orm";
 import { currentAgent, currentEdition, currentSignal } from "@/lib/era";
 
-export async function GET() {
+async function readOnlyGET() {
   try {
     const db = await getDb();
 
@@ -71,4 +72,9 @@ export async function GET() {
       { status: 500 },
     );
   }
+}
+
+/** Read-only handler: retried once on a transient DB failure. */
+export async function GET(...args: Parameters<typeof readOnlyGET>) {
+  return retryRead(() => readOnlyGET(...args));
 }

@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
+import { retryRead } from "@/lib/db/retry";
 import { getDb, schema } from "@/lib/db";
 import { sql } from "drizzle-orm";
 import { currentAgent } from "@/lib/era";
 
-export async function GET() {
+async function readOnlyGET() {
   const db = await getDb();
 
   const leaderboard = await db
@@ -34,4 +35,9 @@ export async function GET() {
   }));
 
   return NextResponse.json({ leaderboard: ranked });
+}
+
+/** Read-only handler: retried once on a transient DB failure. */
+export async function GET(...args: Parameters<typeof readOnlyGET>) {
+  return retryRead(() => readOnlyGET(...args));
 }
