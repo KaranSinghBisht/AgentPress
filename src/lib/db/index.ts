@@ -113,7 +113,7 @@ const MIGRATIONS: Array<(client: Client) => Promise<void>> = [
     const hasStatus = cols.rows.some((r) => r.name === "status");
     if (!hasStatus) {
       await client.execute(
-        "ALTER TABLE editions ADD COLUMN status TEXT DEFAULT 'compiled' NOT NULL"
+        "ALTER TABLE editions ADD COLUMN status TEXT DEFAULT 'compiled' NOT NULL",
       );
     }
 
@@ -154,8 +154,17 @@ const MIGRATIONS: Array<(client: Client) => Promise<void>> = [
     const hasEmailedAt = edCols.rows.some((r) => r.name === "emailed_at");
     if (hasEmailedAt) {
       await client.execute(
-        "UPDATE editions SET status = 'published' WHERE emailed_at IS NOT NULL AND status = 'compiled'"
+        "UPDATE editions SET status = 'published' WHERE emailed_at IS NOT NULL AND status = 'compiled'",
       );
+    }
+  },
+
+  // v3: Herald's fact-check verdict per signal (JSON string)
+  async (client) => {
+    const cols = await client.execute("PRAGMA table_info(signals)");
+    const hasVerification = cols.rows.some((r) => r.name === "verification");
+    if (!hasVerification) {
+      await client.execute("ALTER TABLE signals ADD COLUMN verification TEXT");
     }
   },
 ];
@@ -169,7 +178,7 @@ async function runMigrations(client: Client) {
   `);
 
   const result = await client.execute(
-    "SELECT COALESCE(MAX(version), 0) AS v FROM _schema_migrations"
+    "SELECT COALESCE(MAX(version), 0) AS v FROM _schema_migrations",
   );
   const currentVersion = Number(result.rows[0]?.v ?? 0);
 

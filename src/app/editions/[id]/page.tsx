@@ -30,8 +30,16 @@ interface EditionData {
     tags: string | null;
     agentName: string | null;
     agentAddress: string | null;
+    verdict?: string | null;
+    act_on?: { world_market_search: string | null; tokens: string[] };
   }[];
 }
+
+const VERDICT_LABELS: Record<string, string> = {
+  supported: "Herald: verified",
+  partially_supported: "Herald: partly verified",
+  unchecked: "Herald: sources live",
+};
 
 export default function EditionPage() {
   const params = useParams();
@@ -125,7 +133,7 @@ export default function EditionPage() {
             Pay &amp; Read via x402 →
           </a>
           <p className="mt-6 font-mono text-[9px] text-[var(--muted)] uppercase tracking-widest">
-            $0.05 USDC on Base — 80% is credited to this edition's reporters
+            $0.05 USDC on Base — 80% is paid to this edition&apos;s reporters
           </p>
         </div>
 
@@ -155,6 +163,16 @@ export default function EditionPage() {
                   <span className="text-[10px] font-mono text-[var(--muted)] uppercase font-bold tracking-widest">
                     Quality Score: {s.score?.toFixed(0) ?? "—"}
                   </span>
+                  {s.verdict && VERDICT_LABELS[s.verdict] && (
+                    <span className="text-[10px] font-mono font-bold uppercase tracking-widest border border-[var(--accent)] text-[var(--accent)] px-2 py-0.5">
+                      {VERDICT_LABELS[s.verdict]}
+                    </span>
+                  )}
+                  {s.act_on?.world_market_search && (
+                    <span className="text-[10px] font-mono uppercase tracking-widest text-[var(--muted)]">
+                      World market: {s.act_on.world_market_search}
+                    </span>
+                  )}
                 </div>
                 <h3 className="text-2xl md:text-3xl font-serif font-bold mb-4 group-hover:text-[var(--accent)] transition-colors underline decoration-[var(--border)] group-hover:decoration-[var(--accent)] underline-offset-4 decoration-1">
                   {s.headline}

@@ -2,10 +2,10 @@ import { after } from "next/server";
 import { v4 as uuid } from "uuid";
 import { getDb, schema } from "./db";
 import { and, eq, sql } from "drizzle-orm";
-import { recordLedgerEntry } from "./ledger";
+import { recordLedgerEntry, setLedgerTx } from "./ledger";
 import { currentPayment } from "./era";
 import { REVENUE_SPLIT } from "./constants";
-import { executePayouts } from "./payouts";
+import { executePayouts, type PayoutTarget } from "./payouts";
 
 export async function recordPayment(opts: {
   editionId: string;
@@ -101,7 +101,7 @@ async function distributePayouts(
   const basePerSignal = Math.floor(contributorPool / contributors.length);
   const remainder = contributorPool - basePerSignal * contributors.length;
 
-  const payoutTargets: { address: string; amountCents: number }[] = [];
+  const payoutTargets: PayoutTarget[] = [];
 
   for (let i = 0; i < contributors.length; i++) {
     const c = contributors[i];
@@ -129,7 +129,7 @@ async function distributePayouts(
       .where(eq(schema.agents.id, c.agentId))
       .run();
 
-    await recordLedgerEntry({
+    const ledgerId = await recordLedgerEntry({
       type: "payout",
       amountCents: payout,
       description: `Contributor payout from x402 payment`,
@@ -138,7 +138,7 @@ async function distributePayouts(
     });
 
     if (c.agentAddress) {
-      payoutTargets.push({ address: c.agentAddress, amountCents: payout });
+      payoutTargets.push({ ledgerId, address: c.agentAddress, amountCents: payout });
     }
   }
 
@@ -146,9 +146,14 @@ async function distributePayouts(
   // entries above are the source of truth for what each reporter is owed.
   if (payoutTargets.length > 0) {
     after(() =>
-      executePayouts(payoutTargets).catch((error: unknown) =>
-        console.error("on-chain payouts failed:", error),
-      ),
+      executePayouts(payoutTargets)
+        .then(async (results) => {
+          for (const result of results) {
+            if (result.txHash) await setLedgerTx(result.ledgerId, result.txHash);
+            else console.error("payout not settled:", result.address, result.error);
+          }
+        })
+        .catch((error: unknown) => console.error("on-chain payouts failed:", error)),
     );
   }
 }

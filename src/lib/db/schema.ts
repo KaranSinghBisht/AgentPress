@@ -1,4 +1,10 @@
-import { sqliteTable, text, integer, real, primaryKey } from "drizzle-orm/sqlite-core";
+import {
+  sqliteTable,
+  text,
+  integer,
+  real,
+  primaryKey,
+} from "drizzle-orm/sqlite-core";
 
 export const agents = sqliteTable("agents", {
   id: text("id").primaryKey(),
@@ -28,6 +34,7 @@ export const signals = sqliteTable("signals", {
   status: text("status").default("submitted").notNull(),
   score: real("score"),
   editorFeedback: text("editor_feedback"),
+  verification: text("verification"), // JSON: Herald's fact-check (see lib/herald/verification.ts)
   createdAt: text("created_at").notNull(),
   updatedAt: text("updated_at").notNull(),
 });
@@ -61,7 +68,7 @@ export const editionSignals = sqliteTable(
     position: integer("position").notNull(),
     payoutCents: integer("payout_cents").default(0).notNull(),
   },
-  (table) => [primaryKey({ columns: [table.editionId, table.signalId] })]
+  (table) => [primaryKey({ columns: [table.editionId, table.signalId] })],
 );
 
 export const subscribers = sqliteTable("subscribers", {

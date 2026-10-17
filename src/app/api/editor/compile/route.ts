@@ -6,6 +6,7 @@ import { currentSignal } from "@/lib/era";
 import { compileEdition } from "@/lib/compiler";
 import { EDITION_PRICE_CENTS } from "@/lib/constants";
 import { verifyEditorAuth } from "@/lib/editor-auth";
+import { editorsBrief } from "@/lib/herald/brief";
 
 export async function POST(req: NextRequest) {
   const auth = await verifyEditorAuth(req);
@@ -71,6 +72,11 @@ export async function POST(req: NextRequest) {
     })),
   });
 
+  // Herald's paid editor's brief replaces the template summary; on failure the template stays.
+  const brief = await editorsBrief(
+    included.map((s) => ({ headline: s.headline, body: s.body, beat: s.beat })),
+  );
+
   const now = new Date().toISOString();
   const editionId = uuid();
 
@@ -81,7 +87,7 @@ export async function POST(req: NextRequest) {
       id: editionId,
       number: editionNumber,
       title: compiled.title,
-      summary: compiled.summary,
+      summary: brief ?? compiled.summary,
       contentHtml: compiled.contentHtml,
       contentText: compiled.contentText,
       signalCount: included.length,

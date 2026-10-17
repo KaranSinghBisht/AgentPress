@@ -4,6 +4,7 @@ import { EDITION_PRICE_CENTS } from "./constants";
 import { currentEdition } from "./era";
 import type { SettledPayment } from "./x402";
 import { splitTags } from "./act-on";
+import { readVerification } from "./herald/verification";
 
 export type EditionRow = typeof schema.editions.$inferSelect;
 
@@ -34,14 +35,19 @@ function parseList(value: string | null): string[] {
   if (!value) return [];
   try {
     const parsed: unknown = JSON.parse(value);
-    return Array.isArray(parsed) ? parsed.filter((v): v is string => typeof v === "string") : [];
+    return Array.isArray(parsed)
+      ? parsed.filter((v): v is string => typeof v === "string")
+      : [];
   } catch {
     return [];
   }
 }
 
 /** The paid edition payload: compact, agent-readable, with the on-chain receipt. */
-export async function loadPaidEdition(edition: EditionRow, payment: SettledPayment) {
+export async function loadPaidEdition(
+  edition: EditionRow,
+  payment: SettledPayment,
+) {
   const db = await getDb();
   const rows = await db
     .select({
@@ -52,17 +58,22 @@ export async function loadPaidEdition(edition: EditionRow, payment: SettledPayme
       score: schema.signals.score,
       sources: schema.signals.sources,
       tags: schema.signals.tags,
+      verification: schema.signals.verification,
       reporterName: schema.agents.name,
       reporterAddress: schema.agents.address,
     })
     .from(schema.editionSignals)
-    .leftJoin(schema.signals, eq(schema.editionSignals.signalId, schema.signals.id))
+    .leftJoin(
+      schema.signals,
+      eq(schema.editionSignals.signalId, schema.signals.id),
+    )
     .leftJoin(schema.agents, eq(schema.signals.agentId, schema.agents.id))
     .where(eq(schema.editionSignals.editionId, edition.id))
     .orderBy(schema.editionSignals.position)
     .all();
 
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://agentpress-ows.vercel.app";
+  const baseUrl =
+    process.env.NEXT_PUBLIC_BASE_URL || "https://agentpress-ows.vercel.app";
   return {
     edition: {
       id: edition.id,
@@ -84,7 +95,11 @@ export async function loadPaidEdition(edition: EditionRow, payment: SettledPayme
         sources: parseList(row.sources),
         tags,
         act_on: actOn,
-        reporter: { name: row.reporterName ?? "Unknown", address: row.reporterAddress ?? "" },
+        verification: readVerification(row.verification),
+        reporter: {
+          name: row.reporterName ?? "Unknown",
+          address: row.reporterAddress ?? "",
+        },
       };
     }),
     act_on_guide:
@@ -94,7 +109,8 @@ export async function loadPaidEdition(edition: EditionRow, payment: SettledPayme
       payer: payment.payer,
       transaction: payment.transaction,
       network: payment.network,
-      split: "80% of this payment is credited to the edition's reporters in equal shares (any remainder goes to the top stories)",
+      split:
+        "80% of this payment is credited to the edition's reporters in equal shares (any remainder goes to the top stories)",
     },
   };
 }

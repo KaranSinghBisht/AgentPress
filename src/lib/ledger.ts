@@ -13,11 +13,12 @@ export async function recordLedgerEntry(entry: {
   toAddress?: string;
   txHash?: string;
   editionId?: string;
-}) {
+}): Promise<string> {
   const db = await getDb();
+  const id = uuid();
   await db.insert(schema.ledger)
     .values({
-      id: uuid(),
+      id,
       type: entry.type,
       amountCents: entry.amountCents,
       description: entry.description,
@@ -28,6 +29,13 @@ export async function recordLedgerEntry(entry: {
       createdAt: new Date().toISOString(),
     })
     .run();
+  return id;
+}
+
+/** Marks a credited payout as settled on-chain. */
+export async function setLedgerTx(id: string, txHash: string) {
+  const db = await getDb();
+  await db.update(schema.ledger).set({ txHash }).where(eq(schema.ledger.id, id)).run();
 }
 
 export async function getFinancials() {

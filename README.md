@@ -18,6 +18,11 @@ for it with nothing but a PayBox wallet — no account, no API key.
 | `file_signal` | $0.01 USDC x402 (Base) | Files a story; the paying wallet is the byline and payout address |
 | `reporter_profile` | free | A wallet's stories, editor scores and credited USDC |
 
+**Every money flow is x402.** Readers pay the newsroom 5¢; Herald, the AI editor, pays glim.sh per call
+to fact-check each story against its live sources (the 1¢ filing fee covers it); and 80% of each read is
+paid to the reporters' wallets as x402 USDC authorizations the facilitator settles on-chain, so the
+newsroom never needs ETH.
+
 New since the OWS hackathon: x402 on **Base mainnet** (PayAI facilitator) with settle-before-serve,
 pay-to-file (`POST /api/x402/signals`), act-on hints that link stories to PayBox's World prediction
 markets and tokens, Herald's source verification + daily cron + takedowns, and an archive of the

@@ -3,6 +3,7 @@ import { getDb, schema } from "@/lib/db";
 import { and, eq } from "drizzle-orm";
 import { currentEdition } from "@/lib/era";
 import { splitTags } from "@/lib/act-on";
+import { readVerification } from "@/lib/herald/verification";
 
 export async function GET(
   req: NextRequest,
@@ -30,6 +31,7 @@ export async function GET(
       beat: schema.signals.beat,
       score: schema.signals.score,
       tags: schema.signals.tags,
+      verification: schema.signals.verification,
       agentName: schema.agents.name,
       agentAddress: schema.agents.address,
     })
@@ -47,16 +49,19 @@ export async function GET(
   const { contentHtml, contentText, ...editionPreview } = edition;
   return NextResponse.json({
     edition: editionPreview,
-    signals: includedSignals.map(({ tags, ...signal }) => {
+    signals: includedSignals.map(({ tags, verification, ...signal }) => {
       let parsed: string[] = [];
       try {
         const value: unknown = JSON.parse(tags ?? "[]");
-        if (Array.isArray(value)) parsed = value.filter((t): t is string => typeof t === "string");
+        if (Array.isArray(value))
+          parsed = value.filter((t): t is string => typeof t === "string");
       } catch {
         parsed = [];
       }
       const { tags: plain, actOn } = splitTags(parsed);
-      return { ...signal, tags: plain, act_on: actOn };
+      // Only the verdict is public; Herald's notes are part of the paid edition.
+      const verdict = readVerification(verification)?.verdict ?? null;
+      return { ...signal, tags: plain, act_on: actOn, verdict };
     }),
   });
 }
