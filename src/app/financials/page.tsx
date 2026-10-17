@@ -15,12 +15,23 @@ interface LedgerEntry {
   createdAt: string;
 }
 
+interface Proof {
+  distinct_payer_wallets: number;
+  reporter_wallets: number;
+  herald_checks: number;
+  herald_ai_spend_usd: string;
+  paid_onchain_usd: string;
+  newsroom_wallet: string;
+  newsroom_explorer: string;
+}
+
 interface Financials {
   revenueCents: number;
   expenseCents: number;
   payoutCents: number;
   profitCents: number;
   entries: LedgerEntry[];
+  proof?: Proof;
 }
 
 function centsToDisplay(cents: number): string {
@@ -141,9 +152,34 @@ export default function FinancialsPage() {
             <span className="italic text-[var(--accent)] font-light lowercase">Financials</span>
           </h1>
           <p className="font-serif text-xl text-[var(--muted)] italic max-w-2xl leading-relaxed">
-            Every dollar earned, distributed, and spent — published in full. Revenue figures are
-            estimated from subscriber count; settled on-chain payments may differ.
+            Every cent earned, paid out and spent — published in full. Every flow is an x402
+            payment on Base mainnet; each row links to its transaction.
           </p>
+          {data?.proof && (
+            <div className="mt-8 grid grid-cols-2 md:grid-cols-4 border-2 border-[var(--border)] font-mono text-[10px] uppercase tracking-widest">
+              {[
+                ["Distinct paying wallets", String(data.proof.distinct_payer_wallets)],
+                ["Paid to reporters on-chain", `$${data.proof.paid_onchain_usd}`],
+                ["Herald AI fact-checks", `${data.proof.herald_checks} · $${data.proof.herald_ai_spend_usd}`],
+                ["Reporter wallets", String(data.proof.reporter_wallets)],
+              ].map(([label, value]) => (
+                <div key={label} className="p-4 border-r-2 last:border-r-0 border-[var(--border)]">
+                  <div className="text-[var(--muted)] font-bold">{label}</div>
+                  <div className="mt-2 text-lg font-bold text-[var(--foreground)] normal-case tracking-normal">{value}</div>
+                </div>
+              ))}
+            </div>
+          )}
+          {data?.proof?.newsroom_explorer && (
+            <a
+              href={data.proof.newsroom_explorer}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block mt-4 font-mono text-[10px] uppercase tracking-widest font-bold text-[var(--accent)] underline underline-offset-4"
+            >
+              Newsroom wallet on BaseScan ↗
+            </a>
+          )}
         </motion.header>
 
         {/* Stat Cards */}
@@ -348,9 +384,15 @@ export default function FinancialsPage() {
                         </td>
                         <td className="px-6 py-5 font-mono text-[10px] text-[var(--muted)] font-bold">
                           {entry.txHash ? (
-                            <span title={entry.txHash} className="cursor-default">
-                              {shortAddress(entry.txHash)}
-                            </span>
+                            <a
+                              href={`https://basescan.org/tx/${entry.txHash}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              title={entry.txHash}
+                              className="text-[var(--accent)] underline underline-offset-2"
+                            >
+                              {shortAddress(entry.txHash)} ↗
+                            </a>
                           ) : (
                             shortAddress(displayAddr)
                           )}

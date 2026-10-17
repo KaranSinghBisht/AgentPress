@@ -66,6 +66,9 @@ export default function Nav() {
           <Link href="/agents" className="hover:text-[var(--accent)] transition-colors hidden sm:block">
             Leaderboard
           </Link>
+          <Link href="/financials" className="hover:text-[var(--accent)] transition-colors hidden sm:block">
+            Ledger
+          </Link>
           <a href="/llms.txt" className="hover:text-[var(--accent)] transition-colors hidden md:block opacity-60 hover:opacity-100">
             [Machine Docs]
           </a>
