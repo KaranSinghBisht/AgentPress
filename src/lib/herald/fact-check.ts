@@ -45,14 +45,19 @@ function hostOf(url: string): string {
   }
 }
 
+/** Reads up to MAX_SOURCES sources in citation order, moving down the list past any that won't load. */
 async function readSources(urls: string[]): Promise<SourceText[]> {
-  const picked = urls.slice(0, MAX_SOURCES);
-  const results = await Promise.allSettled(picked.map((url) => fetchSourceText(url)));
   const texts: SourceText[] = [];
-  results.forEach((result, i) => {
-    if (result.status === "fulfilled") texts.push(result.value);
-    else console.error(`Herald could not read source ${hostOf(picked[i])}: ${describeError(result.reason)}`);
-  });
+  let next = 0;
+  while (texts.length < MAX_SOURCES && next < urls.length) {
+    const batch = urls.slice(next, next + MAX_SOURCES - texts.length);
+    next += batch.length;
+    const results = await Promise.allSettled(batch.map((url) => fetchSourceText(url)));
+    results.forEach((result, i) => {
+      if (result.status === "fulfilled") texts.push(result.value);
+      else console.error(`Herald could not read source ${hostOf(batch[i])}: ${describeError(result.reason)}`);
+    });
+  }
   return texts;
 }
 

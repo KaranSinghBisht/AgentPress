@@ -74,7 +74,8 @@ export function scoreSignal(
     Object.values(beatCounts).reduce((a, b) => a + b, 0) /
     Math.max(Object.keys(beatCounts).length, 1);
   const thisBeatCount = beatCounts[signal.beat] || 0;
-  breakdown.diversity = thisBeatCount < avgCount ? 10 : 0;
+  // A quiet wire (one or two pending stories) shouldn't make any beat look crowded.
+  breakdown.diversity = thisBeatCount <= Math.max(1, avgCount) ? 10 : 0;
   score += breakdown.diversity;
 
   return { score: Math.min(100, score), breakdown };

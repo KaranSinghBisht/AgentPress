@@ -21,8 +21,24 @@ export const signalFilingSchema = z
       .array(z.string().trim().min(1).max(40).refine((tag) => !isActOnTag(tag), "Use world_query/tokens instead of prefixed tags"))
       .min(SIGNAL_LIMITS.minTags)
       .max(SIGNAL_LIMITS.maxTags),
-    world_query: z.string().trim().regex(/^[\p{L}\p{N} .,'%$-]{2,80}$/u, "Plain words only").optional(),
-    tokens: z.array(z.string().trim().regex(/^[A-Z0-9]{2,10}$/, "Token tickers like BTC or ETH")).max(3).optional(),
+    // Act-on hints are cleaned rather than rejected: the plugin build PayBox installed describes them
+    // loosely ("symbols or mints"), and a hint is never worth failing a paid filing over.
+    world_query: z
+      .string()
+      .max(200)
+      .optional()
+      .transform((query) => {
+        const clean = query?.replace(/[^\p{L}\p{N} .,'%$-]/gu, " ").replace(/\s+/g, " ").trim().slice(0, 80);
+        return clean && clean.length >= 2 ? clean : undefined;
+      }),
+    tokens: z
+      .array(z.string().trim().max(64))
+      .max(10)
+      .optional()
+      .transform((tokens) => {
+        const tickers = tokens?.map((token) => token.toUpperCase()).filter((token) => /^[A-Z0-9]{2,10}$/.test(token)).slice(0, 3);
+        return tickers && tickers.length > 0 ? tickers : undefined;
+      }),
     reporter_name: z.string().trim().min(2).max(60).optional(),
   })
   .strict();
