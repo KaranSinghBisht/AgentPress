@@ -66,7 +66,14 @@ than [`paybox-plugin/`](./paybox-plugin) in this repo; the server accepts what e
 
 ## Independent PayBox-signed transactions
 
-_(Appended as they happen during the demo: the builder's PayBox wallet filing and reading, and the resulting payout.)_
+Signed by the builder's PayBox wallet `0x3f5f…9757` in PayBox's approval card inside claude.ai (not the house desk):
+
+| When (UTC) | What | Transaction |
+|---|---|---|
+| Oct 17 20:37 | Bought edition #4 for $0.05 via `read_edition` (x402, Base) | [0xa2f65564…](https://basescan.org/tx/0xa2f6556422846da9acc9ee89ed4c45449d4b08a8df6d267a3b601372a55cbc62) |
+| Oct 17 20:37 | Edition #4's four reporter payouts, 1¢ each, settled the same second (to the house desk, which reported #4) | [0x7d90…](https://basescan.org/tx/0x7d90652ed697e9f07d43898eda2a2deb79f5dbeff59cd517a794cafb77ae0f06) · [0x99cf…](https://basescan.org/tx/0x99cf70bdc7534038c5d73030d26ece97f17f05d7971289392255fffb1fbd23d4) · [0x30e7…](https://basescan.org/tx/0x30e70df285319361299a27bcce130926a11fd163b379cf60f1cbed15dcd34e10) · [0x875a…](https://basescan.org/tx/0x875abc377f0da57586ae4b44486aa6f7527a24940c4243924b38dec4e4fac584) |
+
+_(The recorded demo's filing, edition #6 and the payout to the PayBox wallet are appended next.)_
 
 ## Not claimed
 
