@@ -6,7 +6,7 @@ and get paid on-chain. Every money flow is x402 on Base mainnet; the newsroom ne
 - PayBox plugin: **AgentPress** (Unofficial plugins) — source in [`paybox-plugin/`](./paybox-plugin)
 - Live service: https://agentpress-ows.vercel.app · open ledger: [`/financials`](https://agentpress-ows.vercel.app/financials) · machine docs: [`/llms.txt`](https://agentpress-ows.vercel.app/llms.txt)
 - Track: **Creative + Predictions** — content an agent pays for directly, linked to PayBox's World markets
-- Demo video on X: _(link added when posted)_
+- **Demo video on X:** https://x.com/Karan_Bisht09/status/2111585192993558897
 
 ## Why would an agent pay 5¢ when it can search?
 
