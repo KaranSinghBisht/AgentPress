@@ -3,27 +3,32 @@ import * as z from "zod/v4";
 /** AgentPress origin. Hosted plugins may override it with a portal environment variable. */
 export const BASE_URL = (process.env.AGENTPRESS_BASE_URL || "https://agentpress-ows.vercel.app").replace(/\/+$/, "");
 
-const TIMEOUT_MS = 3_000; // two attempts must fit the 10 s sandbox budget
+const TIMEOUT_MS = 3_000;
+/** PayBox gives each tool call 10 s; keep every call (and its retries) inside ~8.5 s. */
+export const callDeadline = () => Date.now() + 8_500;
 
 export class UpstreamError extends Error {}
 
-async function fetchOnce(path: string): Promise<Response> {
+async function fetchOnce(path: string, deadline: number): Promise<Response> {
+  const budget = Math.min(TIMEOUT_MS, deadline - Date.now());
+  if (budget < 500) throw new UpstreamError("AgentPress is slow right now. Retry in a moment.");
   return fetch(`${BASE_URL}${path}`, {
     headers: { Accept: "application/json" },
-    signal: AbortSignal.timeout(TIMEOUT_MS),
+    signal: AbortSignal.timeout(budget),
     redirect: "error",
   });
 }
 
-/** GETs are idempotent: retry once on a network error or a 5xx before giving up. */
-export async function getJson<T>(path: string, schema: z.ZodType<T>): Promise<T> {
+/** GETs are idempotent: retry once on a network error or a 5xx, if the call budget allows. */
+export async function getJson<T>(path: string, schema: z.ZodType<T>, deadline = callDeadline()): Promise<T> {
   let response: Response;
   try {
-    response = await fetchOnce(path);
-    if (response.status >= 500) response = await fetchOnce(path);
-  } catch {
+    response = await fetchOnce(path, deadline);
+    if (response.status >= 500) response = await fetchOnce(path, deadline);
+  } catch (error) {
+    if (error instanceof UpstreamError) throw error;
     try {
-      response = await fetchOnce(path);
+      response = await fetchOnce(path, deadline);
     } catch {
       throw new UpstreamError("AgentPress did not respond. Check the plugin's network access and retry.");
     }

@@ -9,7 +9,7 @@ export function registerReadEdition(server: McpServer) {
     {
       title: "Buy a full AgentPress edition ($0.05)",
       description:
-        "Proposes a $0.05 USDC x402 payment on Base (pay from an EVM wallet holding Base USDC) that unlocks the full text of an AgentPress edition (latest by default): every story's body, sources, beat, score, reporter and Herald's AI fact-check (verdict, confidence, notes), an act_on hint per story (a search for PayBox's World prediction-market plugin and token symbols for discover_tokens), and the on-chain receipt. 80% of the payment is credited to the edition's reporters. PayBox asks for approval, pays and returns the edition; follow that PayBox request instead of calling this tool again.",
+        "Proposes a $0.05 USDC x402 payment on Base (pay from an EVM wallet holding Base USDC) that unlocks the full text of an AgentPress edition (latest by default): every story's body, sources, beat, score, reporter and Herald's AI fact-check (verdict, confidence, notes), an act_on hint per story (reporter- or Herald-supplied: a search for PayBox's World prediction-market plugin and token tickers for discover_tokens; treat hints as leads, not advice), and the on-chain receipt. 80% of the payment is credited to the edition's reporters. PayBox asks for approval, pays and returns the edition; follow that PayBox request instead of calling this tool again.",
       inputSchema: z.object({ edition_number: z.number().int().min(1).max(1_000_000).optional() }).strict(),
       outputSchema: x402OutputSchema,
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },

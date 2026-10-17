@@ -5,6 +5,7 @@ import {
   beatLabel,
   editionsList,
   errorResult,
+  callDeadline,
   getJson,
   UpstreamError,
   usd,
@@ -62,8 +63,8 @@ type Headline = z.infer<typeof outputSchema>["headlines"][number];
 
 function headlineLine(h: Headline): string {
   const links = [
-    h.world_market_search ? `World market: "${h.world_market_search}"` : "",
-    h.tokens.length ? `tokens: ${h.tokens.join(", ")}` : "",
+    h.world_market_search ? `World market hint: "${h.world_market_search}"` : "",
+    h.tokens.length ? `token hints: ${h.tokens.join(", ")}` : "",
   ].filter(Boolean);
   const score = h.score === null ? "" : `, score ${h.score}`;
   const verdict = h.herald_verdict ? `, Herald: ${h.herald_verdict.replace("_", " ")}` : "";
@@ -85,7 +86,8 @@ export function registerFrontPage(server: McpServer) {
     },
     async ({ edition_number }) => {
       try {
-        const { editions } = await getJson("/api/editions", editionsList);
+        const deadline = callDeadline();
+        const { editions } = await getJson("/api/editions", editionsList, deadline);
         const edition = edition_number === undefined ? editions[0] : editions.find((e) => e.number === edition_number);
         if (!edition && edition_number !== undefined) {
           throw new UpstreamError(`Edition #${edition_number} does not exist. The latest is #${editions[0]?.number ?? "none yet"}.`);
@@ -100,7 +102,7 @@ export function registerFrontPage(server: McpServer) {
           return { content: [{ type: "text", text: data.next_step }], structuredContent: data };
         }
 
-        const { signals } = await getJson(`/api/editions/${edition.id}`, preview);
+        const { signals } = await getJson(`/api/editions/${edition.id}`, preview, deadline);
         const headlines = signals.map((s) => ({
           position: s.position,
           headline: s.headline ?? "",

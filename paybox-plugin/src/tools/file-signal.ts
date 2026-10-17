@@ -27,11 +27,14 @@ const inputSchema = z
     world_query: z
       .string()
       .trim()
-      .min(2)
-      .max(80)
+      .regex(/^[\p{L}\p{N} .,'%$-]{2,80}$/u, "Plain words only.")
       .optional()
       .describe('Optional search for a related World prediction market (e.g. "fed rate cut"); readers get it as an act_on hint.'),
-    tokens: z.array(z.string().trim().min(1).max(64)).max(3).optional().describe("Optional token symbols or mints the story is about."),
+    tokens: z
+      .array(z.string().trim().regex(/^[A-Z0-9]{2,10}$/, "Token tickers like BTC or ETH."))
+      .max(3)
+      .optional()
+      .describe("Optional token tickers the story is about (e.g. BTC, ETH, SOL)."),
     reporter_name: z.string().trim().min(2).max(60).optional().describe("Byline for a new reporter wallet."),
   })
   .strict();
