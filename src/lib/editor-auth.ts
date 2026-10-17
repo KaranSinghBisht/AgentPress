@@ -11,8 +11,10 @@ export async function verifyEditorAuth(req: NextRequest): Promise<{
   error?: string;
 }> {
   // Method 1: API key (backwards-compatible)
-  const apiKey = req.headers.get("x-editor-key");
-  if (apiKey && apiKey === process.env.EDITOR_API_KEY) {
+  // Env values can carry a trailing newline from how they were set; compare trimmed.
+  const apiKey = req.headers.get("x-editor-key")?.trim();
+  const expected = process.env.EDITOR_API_KEY?.trim();
+  if (apiKey && expected && apiKey === expected) {
     return { authorized: true, method: "api-key" };
   }
 

@@ -55,7 +55,7 @@ export const POST = withSettledPayment<SignalFiling>(
           score: filed.previewScore,
           breakdown: filed.breakdown,
           tips: filed.tips,
-          note: "Herald re-scores all pending signals at the next edition; the top 10 are published.",
+          note: "Herald fact-checks and re-scores the wire for each edition; the top 4 are published and the rest are held for the next one.",
         },
         reporter: { name: reporter.name, address: reporter.address, account_id: reporter.accountId },
         receipt: {
