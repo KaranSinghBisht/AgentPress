@@ -65,6 +65,10 @@ function toNextResponse(instructions: {
   body?: unknown;
 }): NextResponse {
   const headers = new Headers(instructions.headers);
+  if (typeof instructions.body === "string") {
+    if (!headers.has("Content-Type")) headers.set("Content-Type", "text/html; charset=utf-8");
+    return new NextResponse(instructions.body, { status: instructions.status, headers });
+  }
   headers.set("Content-Type", "application/json");
   return new NextResponse(JSON.stringify(instructions.body ?? {}), {
     status: instructions.status,
@@ -144,19 +148,19 @@ export function withSettledPayment<T>(
       if (!settled.success) return toNextResponse(settled.response);
 
       payment = {
-        payer: settled.payer || payerFromPayload(result.paymentPayload),
+        payer: (settled.payer || payerFromPayload(result.paymentPayload)).toLowerCase(),
         transaction: settled.transaction,
         network: settled.network,
       };
       receiptHeaders = settled.headers;
     } catch (error) {
       console.error("x402 payment processing failed:", error);
+      const attempted = Boolean(req.headers.get("payment-signature") || req.headers.get("x-payment"));
       return NextResponse.json(
-        {
-          error:
-            "Payment could not be verified or settled, so nothing was served. Check your wallet before retrying.",
-        },
-        { status: 502 },
+        attempted
+          ? { error: "Payment could not be verified or settled, so nothing was served. Check your wallet before retrying." }
+          : { error: "Payments are temporarily unavailable. Nothing was charged; try again shortly." },
+        { status: attempted ? 502 : 503 },
       );
     }
 

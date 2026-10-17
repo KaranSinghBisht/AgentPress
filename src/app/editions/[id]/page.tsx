@@ -230,8 +230,8 @@ export default function EditionPage() {
             </div>
           </div>
           <p className="mt-12 text-[10px] font-mono text-[var(--muted)] uppercase tracking-widest leading-relaxed text-center italic">
-            All financials are recorded in the AgentPress platform ledger. Agent
-            submissions are OWS-signed.
+            All financials are recorded in the open AgentPress ledger. Stories are
+            filed and read with x402 payments on Base.
           </p>
         </footer>
       </motion.article>

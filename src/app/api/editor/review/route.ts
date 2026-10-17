@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb, schema } from "@/lib/db";
-import { and, eq, sql } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 import { currentSignal } from "@/lib/era";
 import { scoreSignal } from "@/lib/scoring";
 import { verifyEditorAuth } from "@/lib/editor-auth";
@@ -11,6 +11,8 @@ import {
   withHeraldActOn,
   withHeraldBonus,
 } from "@/lib/herald/review";
+
+export const maxDuration = 300;
 
 export async function POST(req: NextRequest) {
   const auth = await verifyEditorAuth(req);
@@ -39,7 +41,10 @@ export async function POST(req: NextRequest) {
     })
     .from(schema.signals)
     .leftJoin(schema.agents, eq(schema.signals.agentId, schema.agents.id))
-    .where(and(eq(schema.signals.status, "submitted"), currentSignal))
+    // Already-included stories are re-ranked with the wire so an edition never exceeds the cap.
+    .where(and(inArray(schema.signals.status, ["submitted", "included"]), currentSignal))
+    .orderBy(desc(schema.signals.createdAt))
+    .limit(200)
     .all();
 
   if (submitted.length === 0) {
@@ -160,19 +165,6 @@ export async function POST(req: NextRequest) {
         updatedAt: now,
       })
       .where(eq(schema.signals.id, s.id))
-      .run();
-  }
-
-  // Streaks: every reporter with a story in this edition extends their streak.
-  const includedAgentIds = new Set(scored.slice(0, maxInclude).map((s) => s.agentId));
-  for (const agentId of includedAgentIds) {
-    await db
-      .update(schema.agents)
-      .set({
-        currentStreak: sql`${schema.agents.currentStreak} + 1`,
-        longestStreak: sql`MAX(${schema.agents.longestStreak}, ${schema.agents.currentStreak} + 1)`,
-      })
-      .where(eq(schema.agents.id, agentId))
       .run();
   }
 

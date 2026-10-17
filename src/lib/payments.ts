@@ -18,18 +18,20 @@ export async function recordPayment(opts: {
   const now = new Date().toISOString();
   const paymentId = uuid();
 
-  await db
+  const inserted = await db
     .insert(schema.payments)
     .values({
       id: paymentId,
       editionId: opts.editionId,
-      payerAddress: opts.payerAddress,
+      payerAddress: opts.payerAddress.toLowerCase(),
       amountCents: opts.amountCents,
       txHash: opts.txHash ?? null,
       network: opts.network,
       paidAt: now,
     })
-    .run();
+    .onConflictDoNothing()
+    .returning({ id: schema.payments.id });
+  if (inserted.length === 0) return null; // this transaction was already credited
 
   // Create entitlement
   await db

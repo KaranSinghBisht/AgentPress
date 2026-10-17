@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { v4 as uuid } from "uuid";
 import { getDb, schema } from "@/lib/db";
-import { and, eq, sql } from "drizzle-orm";
-import { currentSignal } from "@/lib/era";
+import { and, eq, inArray, notInArray, sql } from "drizzle-orm";
+import { currentAgent, currentSignal } from "@/lib/era";
 import { compileEdition } from "@/lib/compiler";
-import { EDITION_PRICE_CENTS } from "@/lib/constants";
+import { EDITION_PRICE_CENTS, MAX_SIGNALS_PER_EDITION } from "@/lib/constants";
 import { verifyEditorAuth } from "@/lib/editor-auth";
 import { editorsBrief } from "@/lib/herald/brief";
+
+export const maxDuration = 300;
 
 export async function POST(req: NextRequest) {
   const auth = await verifyEditorAuth(req);
@@ -38,6 +40,7 @@ export async function POST(req: NextRequest) {
     .leftJoin(schema.agents, eq(schema.signals.agentId, schema.agents.id))
     .where(and(eq(schema.signals.status, "included"), currentSignal))
     .orderBy(sql`${schema.signals.score} DESC`)
+    .limit(MAX_SIGNALS_PER_EDITION)
     .all();
 
   if (included.length === 0) {
@@ -130,6 +133,22 @@ export async function POST(req: NextRequest) {
       .where(eq(schema.agents.id, s.agentId))
       .run();
   }
+
+  // Streaks: reporters with a story in this edition extend theirs; everyone else resets.
+  const editionAgents = [...new Set(included.map((s) => s.agentId))];
+  await db
+    .update(schema.agents)
+    .set({
+      currentStreak: sql`${schema.agents.currentStreak} + 1`,
+      longestStreak: sql`MAX(${schema.agents.longestStreak}, ${schema.agents.currentStreak} + 1)`,
+    })
+    .where(inArray(schema.agents.id, editionAgents))
+    .run();
+  await db
+    .update(schema.agents)
+    .set({ currentStreak: 0 })
+    .where(and(notInArray(schema.agents.id, editionAgents), currentAgent))
+    .run();
 
   return NextResponse.json({
     message: `Edition #${editionNumber} compiled`,

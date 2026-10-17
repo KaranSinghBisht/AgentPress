@@ -1,10 +1,5 @@
 import { BEAT_LABELS, BEAT_COLORS } from "./constants";
 import type { Beat } from "./constants";
-import {
-  getTrendingTokens,
-  formatMarketSnapshotHtml,
-  formatMarketSnapshotText,
-} from "./moonpay";
 
 interface CompiledSignal {
   headline: string;
@@ -35,15 +30,8 @@ export async function compileEdition(input: CompileInput) {
 
   const summary = `This edition features ${signals.length} signal${signals.length > 1 ? "s" : ""} covering ${beats.map((b) => BEAT_LABELS[b as Beat] || b).join(", ")}. Top story: ${topSignal.headline}`;
 
-  // Fetch market data via MoonPay CLI
-  const trending = await getTrendingTokens("ethereum", 5);
-  const marketHtml = formatMarketSnapshotHtml(trending);
-  const marketText = formatMarketSnapshotText(trending);
-
-  const contentHtml =
-    buildHtml(editionNumber, title, summary, signals) + marketHtml;
-  const contentText =
-    buildText(editionNumber, title, summary, signals) + marketText;
+  const contentHtml = buildHtml(editionNumber, title, summary, signals);
+  const contentText = buildText(editionNumber, title, summary, signals);
 
   return {
     title,

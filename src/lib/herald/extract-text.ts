@@ -1,3 +1,5 @@
+import { resolvesToPublic } from "./public-host";
+
 /**
  * Fetches a cited source and reduces it to readable text Herald can judge:
  * title, meta description, then the page's main text, capped in length.
@@ -34,14 +36,17 @@ export function fetchableUrl(raw: string, base?: string): URL | null {
   return url;
 }
 
-/** Follows redirects by hand so every hop passes the same public-URL check. */
-async function fetchPublic(
+/** Follows redirects by hand so every hop passes the same public-URL and public-DNS check. */
+export async function fetchPublic(
   start: string,
   signal: AbortSignal,
+  method: "GET" | "HEAD" = "GET",
 ): Promise<Response> {
   let url = fetchableUrl(start);
   for (let hop = 0; url && hop <= MAX_REDIRECTS; hop++) {
+    if (!(await resolvesToPublic(url.hostname))) break;
     const response = await fetch(url, {
+      method,
       redirect: "manual",
       signal,
       headers: {

@@ -44,11 +44,19 @@ async function readOnlyGET(_req: NextRequest, { params }: { params: Promise<{ ad
     .from(schema.ledger)
     .where(and(eq(schema.ledger.type, "payout"), sql`LOWER(${schema.ledger.toAddress}) = ${wallet}`, currentLedger))
     .orderBy(desc(schema.ledger.createdAt))
-    .limit(50)
+    .limit(10)
     .all();
 
-  const credited = payouts.reduce((n, p) => n + p.amountCents, 0);
-  const paid = payouts.filter((p) => p.txHash).reduce((n, p) => n + p.amountCents, 0);
+  const totals = await db
+    .select({
+      credited: sql<number>`COALESCE(SUM(${schema.ledger.amountCents}), 0)`,
+      paid: sql<number>`COALESCE(SUM(CASE WHEN ${schema.ledger.txHash} IS NOT NULL THEN ${schema.ledger.amountCents} ELSE 0 END), 0)`,
+    })
+    .from(schema.ledger)
+    .where(and(eq(schema.ledger.type, "payout"), sql`LOWER(${schema.ledger.toAddress}) = ${wallet}`, currentLedger))
+    .get();
+  const credited = Number(totals?.credited ?? 0);
+  const paid = Number(totals?.paid ?? 0);
 
   return NextResponse.json({
     address: wallet,

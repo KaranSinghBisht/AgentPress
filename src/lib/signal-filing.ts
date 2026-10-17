@@ -21,8 +21,8 @@ export const signalFilingSchema = z
       .array(z.string().trim().min(1).max(40).refine((tag) => !isActOnTag(tag), "Use world_query/tokens instead of prefixed tags"))
       .min(SIGNAL_LIMITS.minTags)
       .max(SIGNAL_LIMITS.maxTags),
-    world_query: z.string().trim().min(2).max(80).optional(),
-    tokens: z.array(z.string().trim().min(1).max(64)).max(3).optional(),
+    world_query: z.string().trim().regex(/^[\p{L}\p{N} .,'%$-]{2,80}$/u, "Plain words only").optional(),
+    tokens: z.array(z.string().trim().regex(/^[A-Z0-9]{2,10}$/, "Token tickers like BTC or ETH")).max(3).optional(),
     reporter_name: z.string().trim().min(2).max(60).optional(),
   })
   .strict();
@@ -65,15 +65,14 @@ export async function upsertReporter(
     bio: "Files signals through x402 (PayBox plugin or any x402 client).",
     registeredAt: new Date().toISOString(),
   };
-  await db.insert(schema.agents).values(agent).run();
-  return {
-    ...agent,
-    totalSignals: 0,
-    signalsIncluded: 0,
-    totalEarnedCents: 0,
-    currentStreak: 0,
-    longestStreak: 0,
-  };
+  await db.insert(schema.agents).values(agent).onConflictDoNothing().run();
+  const created = await db
+    .select()
+    .from(schema.agents)
+    .where(eq(schema.agents.accountId, accountId))
+    .get();
+  if (!created) throw new Error("reporter row missing after insert");
+  return created;
 }
 
 async function pendingBeatCounts(): Promise<Record<string, number>> {

@@ -164,8 +164,20 @@ const MIGRATIONS: Array<(client: Client) => Promise<void>> = [
     const cols = await client.execute("PRAGMA table_info(signals)");
     const hasVerification = cols.rows.some((r) => r.name === "verification");
     if (!hasVerification) {
-      await client.execute("ALTER TABLE signals ADD COLUMN verification TEXT");
+      try {
+        await client.execute("ALTER TABLE signals ADD COLUMN verification TEXT");
+      } catch (error) {
+        // Another cold start may have added it a moment ago.
+        if (!String(error).includes("duplicate column")) throw error;
+      }
     }
+  },
+
+  // v4: one payment row per settled transaction (a replayed settlement can't pay reporters twice)
+  async (client) => {
+    await client.execute(
+      "CREATE UNIQUE INDEX IF NOT EXISTS idx_payments_network_tx ON payments(network, tx_hash)",
+    );
   },
 ];
 
@@ -185,7 +197,7 @@ async function runMigrations(client: Client) {
   for (let i = currentVersion; i < MIGRATIONS.length; i++) {
     await MIGRATIONS[i](client);
     await client.execute({
-      sql: "INSERT INTO _schema_migrations (version, applied_at) VALUES (?, ?)",
+      sql: "INSERT OR IGNORE INTO _schema_migrations (version, applied_at) VALUES (?, ?)",
       args: [i + 1, new Date().toISOString()],
     });
   }
@@ -193,7 +205,11 @@ async function runMigrations(client: Client) {
 
 export async function getDb(): Promise<DbClient> {
   if (!_dbPromise) {
-    _dbPromise = initDb();
+    // A failed cold start must not poison this instance: clear it so the next call retries.
+    _dbPromise = initDb().catch((error: unknown) => {
+      _dbPromise = null;
+      throw error;
+    });
   }
   return _dbPromise;
 }

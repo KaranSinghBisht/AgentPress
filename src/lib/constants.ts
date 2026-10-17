@@ -39,7 +39,6 @@ export const REPUTABLE_DOMAINS = [
   "techcrunch.com",
   "theverge.com",
   "arxiv.org",
-  "github.com",
   "x402.org",
   "openwallet.sh",
   "docs.openwallet.sh",

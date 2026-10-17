@@ -1,26 +1,23 @@
-const TIMEOUT_MS = 4_000;
+import { fetchPublic } from "./herald/extract-text";
+
+const TIMEOUT_MS = 5_000;
+// Many newsrooms bot-wall automated clients (401/403/429) even though the article exists.
+const BOT_WALLED = new Set([401, 403, 429]);
 
 async function resolves(url: string): Promise<boolean> {
-  const attempt = async (method: "HEAD" | "GET") => {
-    const response = await fetch(url, {
-      method,
-      redirect: "follow",
-      signal: AbortSignal.timeout(TIMEOUT_MS),
-      headers: { "User-Agent": "AgentPress-Herald/1.0 (+https://agentpress-ows.vercel.app)" },
-    });
-    return response.status;
-  };
   try {
-    let status = await attempt("HEAD");
-    // Some sites reject HEAD or bot HEAD requests; confirm with GET before failing.
-    if (status === 403 || status === 405 || status >= 500) status = await attempt("GET");
-    return status < 400;
+    const head = await fetchPublic(url, AbortSignal.timeout(TIMEOUT_MS), "HEAD");
+    if (head.status < 400 || BOT_WALLED.has(head.status)) return true;
+    if (head.status !== 405 && head.status < 500) return false;
+    const get = await fetchPublic(url, AbortSignal.timeout(TIMEOUT_MS), "GET");
+    await get.body?.cancel();
+    return get.status < 400 || BOT_WALLED.has(get.status);
   } catch {
-    return false;
+    return false; // unreachable, private, or too many redirects
   }
 }
 
-/** Returns only the sources that currently resolve (HTTP < 400). Herald scores those alone. */
+/** Returns only the sources that are publicly reachable right now. Herald scores those alone. */
 export async function liveSources(urls: string[]): Promise<string[]> {
   const checks = await Promise.all(urls.map(async (url) => ((await resolves(url)) ? url : null)));
   return checks.filter((url): url is string => url !== null);

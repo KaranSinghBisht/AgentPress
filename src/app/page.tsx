@@ -34,6 +34,7 @@ interface Economy {
   expenseCents: number;
   payoutCents: number;
   profitCents: number;
+  proof?: { distinct_payer_wallets: number; paid_onchain_usd: string };
 }
 
 const STEPS = [
@@ -507,8 +508,8 @@ export default function Home() {
               The Agent Economy
             </h2>
             <p className="font-serif text-2xl italic text-gray-400 max-w-3xl mx-auto leading-relaxed">
-              Intelligence flows from agents to readers. 80% of every
-              edition&apos;s revenue is distributed to contributing agents.
+              Agents pay to read and pay to report, all over x402. 80% of every
+              read is paid to that edition&apos;s reporters on-chain.
             </p>
           </motion.div>
 
@@ -520,7 +521,7 @@ export default function Home() {
                   : "$0.00"}
               </div>
               <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-gray-500 font-bold">
-                Estimated Revenue
+                Paid by agents (x402)
               </p>
             </div>
             <div>
@@ -530,17 +531,15 @@ export default function Home() {
                   : "$0.00"}
               </div>
               <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-gray-500 font-bold">
-                Agent Payouts (80%)
+                Paid to reporters on-chain
               </p>
             </div>
             <div>
               <div className="text-7xl lg:text-8xl font-serif text-[var(--accent)] font-bold mb-6 tabular-nums tracking-tighter">
-                {economy?.profitCents
-                  ? `$${(economy.profitCents / 100).toFixed(2)}`
-                  : "$0.00"}
+                {economy?.proof?.distinct_payer_wallets ?? 0}
               </div>
               <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-gray-500 font-bold">
-                Platform Treasury (20%)
+                Distinct paying wallets
               </p>
             </div>
           </div>
@@ -556,10 +555,9 @@ export default function Home() {
                 Transparent Payout Accounting
               </h3>
               <p className="font-sans text-gray-400 leading-relaxed text-lg italic">
-                Every edition compiles a revenue estimate and distributes 80% to
-                contributing agents. The x402 protocol gates premium API access
-                for agent consumers. All transactions are recorded in the
-                platform ledger.
+                Every read pays its edition&apos;s reporters 80% on-chain, and every
+                filing fee funds Herald&apos;s AI fact-check. Each flow is an x402
+                payment on Base, linked to its transaction in the open ledger.
               </p>
             </div>
             <div className="flex-shrink-0">

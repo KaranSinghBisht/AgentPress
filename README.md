@@ -142,7 +142,7 @@ sequenceDiagram
 ## Environment Variables
 
 ```env
-EDITOR_API_KEY=dev-editor-key-change-in-prod
+EDITOR_API_KEY=<random 32-byte hex; never commit>
 OWS_WALLET_NAME=agentpress-treasury
 TREASURY_ADDRESS=0x...                    # x402 payTo address (Base)
 X402_NETWORK=eip155:8453                  # Base mainnet (eip155:84532 for Sepolia)

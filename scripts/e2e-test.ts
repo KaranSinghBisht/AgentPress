@@ -110,7 +110,7 @@ async function testEditorReview(hasUnreviewed: boolean) {
   const { status, body } = await post(
     "/api/editor/review",
     {},
-    { "x-editor-key": "dev-editor-key-change-in-prod" },
+    { "x-editor-key": process.env.EDITOR_API_KEY ?? "" },
   );
   ok("responds 200", status === 200);
   ok("has reviewed count", typeof body?.reviewed === "number");
@@ -243,7 +243,7 @@ async function testEditorPipeline() {
     const reviewRes = await post(
       "/api/editor/review",
       {},
-      { "x-editor-key": "dev-editor-key-change-in-prod" },
+      { "x-editor-key": process.env.EDITOR_API_KEY ?? "" },
     );
     ok("review responds 200", reviewRes.status === 200);
     ok(
@@ -269,7 +269,7 @@ async function testEditorPipeline() {
     const compileRes = await post(
       "/api/editor/compile",
       {},
-      { "x-editor-key": "dev-editor-key-change-in-prod" },
+      { "x-editor-key": process.env.EDITOR_API_KEY ?? "" },
     );
     ok("compile responds 200", compileRes.status === 200);
     ok(
@@ -290,7 +290,7 @@ async function testEditorPipeline() {
     const publishRes = await post(
       "/api/editor/publish",
       {},
-      { "x-editor-key": "dev-editor-key-change-in-prod" },
+      { "x-editor-key": process.env.EDITOR_API_KEY ?? "" },
     );
     ok("publish responds 200", publishRes.status === 200);
     ok(
@@ -353,7 +353,7 @@ async function testSubscribeAndPublishFlow() {
   const publishRes = await post(
     "/api/editor/publish",
     {},
-    { "x-editor-key": "dev-editor-key-change-in-prod" },
+    { "x-editor-key": process.env.EDITOR_API_KEY ?? "" },
   );
   ok(
     "publish responds 200 or 400",
@@ -433,7 +433,7 @@ async function testPublishRetryIdempotency() {
     const compileRes = await post(
       "/api/editor/compile",
       {},
-      { "x-editor-key": "dev-editor-key-change-in-prod" },
+      { "x-editor-key": process.env.EDITOR_API_KEY ?? "" },
     );
     ok("compile responds 200", compileRes.status === 200);
     testEditionId = compileRes.body?.edition?.id ?? null;
@@ -447,7 +447,7 @@ async function testPublishRetryIdempotency() {
     const pub1 = await post(
       "/api/editor/publish",
       {},
-      { "x-editor-key": "dev-editor-key-change-in-prod" },
+      { "x-editor-key": process.env.EDITOR_API_KEY ?? "" },
     );
     ok("first publish responds 200", pub1.status === 200);
     ok("first publish status is published", pub1.body?.status === "published");
@@ -463,7 +463,7 @@ async function testPublishRetryIdempotency() {
     const pub2 = await post(
       "/api/editor/publish",
       {},
-      { "x-editor-key": "dev-editor-key-change-in-prod" },
+      { "x-editor-key": process.env.EDITOR_API_KEY ?? "" },
     );
     ok("retry publish responds 200", pub2.status === 200);
     ok("retry publish is idempotent", pub2.body?.alreadyPublished === true);
@@ -557,7 +557,7 @@ async function testEditionStatusFlow() {
     const compileRes = await post(
       "/api/editor/compile",
       {},
-      { "x-editor-key": "dev-editor-key-change-in-prod" },
+      { "x-editor-key": process.env.EDITOR_API_KEY ?? "" },
     );
     ok("compile responds 200", compileRes.status === 200);
     testEditionId = compileRes.body?.edition?.id ?? null;
@@ -575,7 +575,7 @@ async function testEditionStatusFlow() {
       const pubRes = await post(
         "/api/editor/publish",
         {},
-        { "x-editor-key": "dev-editor-key-change-in-prod" },
+        { "x-editor-key": process.env.EDITOR_API_KEY ?? "" },
       );
       ok("publish responds 200", pubRes.status === 200);
 

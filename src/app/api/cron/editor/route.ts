@@ -5,6 +5,8 @@ import { currentSignal } from "@/lib/era";
 import { POST as review } from "../../editor/review/route";
 import { POST as compile } from "../../editor/compile/route";
 
+export const maxDuration = 300;
+
 const MIN_STORIES = 3;
 
 /** Herald's daily run (Vercel cron): verify + score the wire, then compile when enough stories qualify. */

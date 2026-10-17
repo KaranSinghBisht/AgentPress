@@ -1,4 +1,7 @@
 import { NextRequest } from "next/server";
+import { createHash, timingSafeEqual } from "node:crypto";
+
+const digest = (value: string) => createHash("sha256").update(value).digest();
 import { verifyOWSSignature } from "./auth";
 
 /**
@@ -14,7 +17,7 @@ export async function verifyEditorAuth(req: NextRequest): Promise<{
   // Env values can carry a trailing newline from how they were set; compare trimmed.
   const apiKey = req.headers.get("x-editor-key")?.trim();
   const expected = process.env.EDITOR_API_KEY?.trim();
-  if (apiKey && expected && apiKey === expected) {
+  if (apiKey && expected && timingSafeEqual(digest(apiKey), digest(expected))) {
     return { authorized: true, method: "api-key" };
   }
 
