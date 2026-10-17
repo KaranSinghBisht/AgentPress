@@ -9,6 +9,8 @@ const MAX_TEXT_CHARS = 2_500;
 const MAX_BODY_BYTES = 1_500_000;
 const MAX_REDIRECTS = 5;
 const MIN_MAIN_CHARS = 400;
+// Some newsrooms reset a share of automated connections; retry those (never timeouts).
+const NETWORK_ATTEMPTS = 4;
 const USER_AGENT =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36";
 
@@ -36,6 +38,17 @@ export function fetchableUrl(raw: string, base?: string): URL | null {
   return url;
 }
 
+async function fetchWithRetry(url: URL, init: RequestInit, signal: AbortSignal): Promise<Response> {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await fetch(url, { ...init, signal });
+    } catch (error) {
+      if (signal.aborted || attempt >= NETWORK_ATTEMPTS) throw error;
+      await new Promise((resolve) => setTimeout(resolve, 200 * attempt));
+    }
+  }
+}
+
 /** Follows redirects by hand so every hop passes the same public-URL and public-DNS check. */
 export async function fetchPublic(
   start: string,
@@ -45,16 +58,19 @@ export async function fetchPublic(
   let url = fetchableUrl(start);
   for (let hop = 0; url && hop <= MAX_REDIRECTS; hop++) {
     if (!(await resolvesToPublic(url.hostname))) break;
-    const response = await fetch(url, {
-      method,
-      redirect: "manual",
-      signal,
-      headers: {
-        "User-Agent": USER_AGENT,
-        Accept: "text/html,application/xhtml+xml,text/plain;q=0.9,*/*;q=0.5",
-        "Accept-Language": "en-US,en;q=0.9",
+    const response = await fetchWithRetry(
+      url,
+      {
+        method,
+        redirect: "manual",
+        headers: {
+          "User-Agent": USER_AGENT,
+          Accept: "text/html,application/xhtml+xml,text/plain;q=0.9,*/*;q=0.5",
+          "Accept-Language": "en-US,en;q=0.9",
+        },
       },
-    });
+      signal,
+    );
     const location = response.headers.get("location");
     if (response.status < 300 || response.status >= 400 || !location)
       return response;

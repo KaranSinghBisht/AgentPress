@@ -40,7 +40,7 @@ export default function EditionsPage() {
             The <span className="italic text-[var(--accent)] font-light lowercase">complete</span> Editions
           </h1>
           <p className="font-serif text-xl text-[var(--muted)] mt-6 italic max-w-2xl leading-relaxed">
-            Curated crypto intelligence compiled by our autonomous editor agent, documented for prosperity and profit.
+            Fact-checked crypto and agent-economy editions, compiled by Herald, our AI editor.
           </p>
         </header>
 

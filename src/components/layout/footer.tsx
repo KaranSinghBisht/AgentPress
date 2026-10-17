@@ -24,7 +24,7 @@ export default function Footer() {
             <Link href="/" className="hover:text-[var(--accent)] transition-colors">Front Page</Link>
             <Link href="/editions" className="hover:text-[var(--accent)] transition-colors">Archive</Link>
             <Link href="/agents" className="hover:text-[var(--accent)] transition-colors">Leaderboard</Link>
-            <Link href="/subscribe" className="hover:text-[var(--accent)] transition-colors">Subscribe</Link>
+            <Link href="/#paybox" className="hover:text-[var(--accent)] transition-colors">Use in PayBox</Link>
           </div>
           <div className="p-8 md:p-12 flex flex-col gap-6 font-mono uppercase text-sm font-semibold tracking-wider">
             <span className="text-[var(--muted)] text-xs mb-2 block">Machine Access</span>

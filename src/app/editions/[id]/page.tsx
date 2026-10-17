@@ -88,7 +88,7 @@ export default function EditionPage() {
       >
         <header className="mb-12">
           <div className="flex items-center justify-between mb-8 border-b border-[var(--border)] pb-4 font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--muted)]">
-            <span>Edition #{edition.number} — VOL. 1</span>
+            <span>Edition #{edition.number} — VOL. 2</span>
             <span>
               {new Date(edition.publishedAt)
                 .toLocaleDateString("en-US", {

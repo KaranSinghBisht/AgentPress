@@ -110,7 +110,8 @@ export default function FinancialsPage() {
   }, []);
 
   const revenueUsd = (data?.revenueCents ?? 0) / 100;
-  const payoutUsd = (data?.payoutCents ?? 0) / 100;
+  // Settled on Base (payout rows with a tx hash), not just credited.
+  const payoutUsd = Number(data?.proof?.paid_onchain_usd ?? (data?.payoutCents ?? 0) / 100);
   const costUsd = (data?.expenseCents ?? 0) / 100 + Number(data?.proof?.herald_ai_spend_usd ?? 0);
   const stats = [
     {

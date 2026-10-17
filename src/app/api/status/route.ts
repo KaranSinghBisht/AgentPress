@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { retryRead } from "@/lib/db/retry";
 import { getDb, schema } from "@/lib/db";
 import { and, sql } from "drizzle-orm";
-import { currentAgent, currentEdition, currentSignal } from "@/lib/era";
+import { ERA_START, currentAgent, currentEdition, currentSignal } from "@/lib/era";
 
 async function readOnlyGET() {
   try {
@@ -40,6 +40,7 @@ async function readOnlyGET() {
         await db
           .select({ count: sql<number>`COUNT(*)` })
           .from(schema.subscribers)
+          .where(sql`${schema.subscribers.subscribedAt} >= ${ERA_START}`)
           .get()
       )?.count ?? 0;
 

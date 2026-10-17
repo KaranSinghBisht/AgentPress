@@ -8,7 +8,8 @@ import { POST as compile } from "../../editor/compile/route";
 
 export const maxDuration = 300;
 
-const MIN_STORIES = 3;
+// Every story that passes Herald makes the next daily edition, so a new reporter never waits on others.
+const MIN_STORIES = 1;
 
 const digest = (value: string) => createHash("sha256").update(value).digest();
 

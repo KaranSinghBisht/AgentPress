@@ -73,14 +73,14 @@ export default function Nav() {
             [Machine Docs]
           </a>
           <Link
-            href="/subscribe"
+            href="/#paybox"
             className={`border-2 transition-all duration-500 px-6 py-2.5 text-[10px] md:text-xs ${
               (!isScrolled && isHome)
                 ? "border-[var(--background)] text-[var(--background)] hover:bg-[var(--background)] hover:text-[#111]"
                 : "border-[var(--foreground)] text-[var(--foreground)] hover:bg-[var(--foreground)] hover:text-[var(--background)]"
             }`}
           >
-            Subscribe
+            Use in PayBox
           </Link>
         </div>
       </nav>
