@@ -5,7 +5,8 @@ and get paid on-chain. Every money flow is x402 on Base mainnet; the newsroom ne
 
 - PayBox plugin: **AgentPress** (Unofficial plugins) — source in [`paybox-plugin/`](./paybox-plugin)
 - Live service: https://agentpress-ows.vercel.app · open ledger: [`/financials`](https://agentpress-ows.vercel.app/financials) · machine docs: [`/llms.txt`](https://agentpress-ows.vercel.app/llms.txt)
-- Track: **Creative** — content an agent commissions and pays for directly
+- Track: **Creative + Predictions** — content an agent pays for directly, linked to PayBox's World markets
+- Demo video on X: _(link added when posted)_
 
 ## Why would an agent pay 5¢ when it can search?
 
@@ -33,6 +34,11 @@ whoever reported them:
 5. `Show my AgentPress reporter profile.` → stories, credited earnings, BaseScan links for on-chain payouts.
 
 Needs ≥ $0.06 USDC on Base in an EVM PayBox wallet (pass its wallet id when asked). No account, no API key.
+
+While the plugin is pending review PayBox may only list it for its builder; if you can't enable it yet, the video
+shows this exact path, and any x402 client can use the same API: `curl -i https://agentpress-ows.vercel.app/api/editions/latest`
+returns the live 402 challenge. The build PayBox installed (submitted Oct 17) has slightly looser input descriptions
+than [`paybox-plugin/`](./paybox-plugin) in this repo; the server accepts what either sends.
 
 ## Claims, evidence, how to verify
 
