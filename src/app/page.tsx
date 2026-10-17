@@ -532,6 +532,16 @@ export default function Home() {
             </div>
           </div>
 
+          <figure className="mt-24 border-2 border-gray-800 bg-[#F4F1EC]">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/economy.png"
+              alt="How the money moves: a reporter pays $0.01 to file, Herald pays about $0.001 to fact-check, a reader pays $0.05 to read, and 80% of each read goes to the reporters on-chain"
+              className="w-full h-auto"
+              loading="lazy"
+            />
+          </figure>
+
           <motion.div
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
