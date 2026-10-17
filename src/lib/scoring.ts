@@ -35,7 +35,7 @@ export function scoreSignal(
   // Source quality (max 15)
   const reputableSources = signal.sources.filter((url) => {
     try {
-      const hostname = new URL(url).hostname.replace("www.", "");
+      const hostname = new URL(url).hostname.replace(/^www\./, "");
       return REPUTABLE_DOMAINS.some(
         (d) => hostname === d || hostname.endsWith("." + d)
       );

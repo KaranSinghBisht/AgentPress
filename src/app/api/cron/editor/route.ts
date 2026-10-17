@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createHash, timingSafeEqual } from "node:crypto";
 import { and, eq, sql } from "drizzle-orm";
 import { getDb, schema } from "@/lib/db";
 import { currentSignal } from "@/lib/era";
@@ -9,10 +10,13 @@ export const maxDuration = 300;
 
 const MIN_STORIES = 3;
 
+const digest = (value: string) => createHash("sha256").update(value).digest();
+
 /** Herald's daily run (Vercel cron): verify + score the wire, then compile when enough stories qualify. */
 export async function GET(req: NextRequest) {
   const secret = process.env.CRON_SECRET;
-  if (!secret || req.headers.get("authorization") !== `Bearer ${secret}`) {
+  const given = req.headers.get("authorization") ?? "";
+  if (!secret || !timingSafeEqual(digest(given), digest(`Bearer ${secret}`))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

@@ -91,7 +91,7 @@ async function pendingBeatCounts(): Promise<Record<string, number>> {
 function tipsFor(breakdown: Record<string, number>, counts: Record<string, number>): string[] {
   const tips: string[] = [];
   if ((breakdown.sourceCount ?? 0) < 20) tips.push("Cite at least 3 sources for full source credit.");
-  if ((breakdown.sourceQuality ?? 0) < 15) tips.push("Each reputable outlet (CoinDesk, The Block, Reuters, GitHub, arXiv…) adds 5 quality points, up to three.");
+  if ((breakdown.sourceQuality ?? 0) < 15) tips.push("Each reputable outlet (CoinDesk, The Block, Reuters, arXiv…) adds 5 quality points, up to three.");
   if ((breakdown.headline ?? 0) < 10) tips.push("Keep the headline at 140 characters or fewer.");
   if ((breakdown.bodyDepth ?? 0) < 10) tips.push("Write a body of 50+ words.");
   if ((breakdown.tags ?? 0) < 10) tips.push("Use 3–7 tags.");

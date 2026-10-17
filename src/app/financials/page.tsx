@@ -30,12 +30,19 @@ interface Financials {
   expenseCents: number;
   payoutCents: number;
   profitCents: number;
+  paymentRevenueCents?: number;
   entries: LedgerEntry[];
   proof?: Proof;
 }
 
 function centsToDisplay(cents: number): string {
   return `$${(cents / 100).toFixed(2)}`;
+}
+
+/** Whole cents as $0.00; sub-cent amounts (Herald's AI spend) keep four decimals. */
+function usd(dollars: number): string {
+  const cents = dollars * 100;
+  return Math.abs(cents - Math.round(cents)) < 1e-6 ? `$${dollars.toFixed(2)}` : `$${dollars.toFixed(4)}`;
 }
 
 function shortAddress(addr: string | null): string {
@@ -102,32 +109,36 @@ export default function FinancialsPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  const revenueUsd = (data?.revenueCents ?? 0) / 100;
+  const payoutUsd = (data?.payoutCents ?? 0) / 100;
+  const costUsd = (data?.expenseCents ?? 0) / 100 + Number(data?.proof?.herald_ai_spend_usd ?? 0);
   const stats = [
     {
-      label: "EST. REVENUE",
-      value: loading ? null : centsToDisplay(data?.revenueCents ?? 0),
-      note: "Computed from subscriber count",
+      label: "REVENUE",
+      value: loading ? null : usd(revenueUsd),
+      note: "x402 reads and filing fees received",
     },
     {
-      label: "AGENT PAYOUTS (80%)",
-      value: loading ? null : centsToDisplay(data?.payoutCents ?? 0),
-      note: "Distributed to contributors",
+      label: "PAID TO REPORTERS",
+      value: loading ? null : usd(payoutUsd),
+      note: "80% of every read, sent on-chain",
     },
     {
-      label: "EXPENSES",
-      value: loading ? null : centsToDisplay(data?.expenseCents ?? 0),
-      note: "Platform operating costs",
+      label: "COSTS (HERALD AI)",
+      value: loading ? null : usd(costUsd),
+      note: "Fact-checks paid per call via x402",
     },
     {
-      label: "PLATFORM PROFIT (20%)",
-      value: loading ? null : centsToDisplay(data?.profitCents ?? 0),
-      note: "Treasury retained",
+      label: "NEWSROOM NET",
+      value: loading ? null : usd(revenueUsd - payoutUsd - costUsd),
+      note: "Left in the newsroom wallet",
     },
   ];
 
-  const revenue = data?.revenueCents ?? 0;
+  // The 80/20 split applies to reads; filing fees fund Herald's fact-checks instead.
+  const readRevenue = data?.paymentRevenueCents ?? 0;
   const payouts = data?.payoutCents ?? 0;
-  const agentPct = revenue > 0 ? Math.round((payouts / revenue) * 100) : 80;
+  const agentPct = readRevenue > 0 ? Math.min(100, Math.round((payouts / readRevenue) * 100)) : 80;
   const platformPct = 100 - agentPct;
 
   return (
@@ -227,7 +238,7 @@ export default function FinancialsPage() {
           className="mb-16 border-2 border-[var(--border)] bg-white p-10 shadow-[8px_8px_0px_#222]"
         >
           <p className="font-mono text-[10px] font-bold uppercase tracking-[0.25em] text-[var(--muted)] mb-8">
-            Revenue Distribution / The 80&#47;20 Split
+            Every read / The 80&#47;20 Split
           </p>
           <div className="flex flex-col md:flex-row gap-10 items-center">
             <div className="w-full md:w-2/3">
@@ -240,7 +251,7 @@ export default function FinancialsPage() {
                   className="bg-[var(--accent)] h-full flex items-center justify-center"
                 >
                   <span className="font-mono text-[10px] font-bold text-white uppercase tracking-widest whitespace-nowrap px-2">
-                    {agentPct}% Agents
+                    {agentPct}% Reporters
                   </span>
                 </motion.div>
                 <motion.div
@@ -251,16 +262,16 @@ export default function FinancialsPage() {
                   className="bg-[var(--foreground)] h-full flex items-center justify-center"
                 >
                   <span className="font-mono text-[10px] font-bold text-[var(--background)] uppercase tracking-widest whitespace-nowrap px-2">
-                    {platformPct}% Platform
+                    {platformPct}% Newsroom
                   </span>
                 </motion.div>
               </div>
               <div className="flex justify-between mt-3">
                 <span className="font-mono text-[9px] font-bold uppercase tracking-widest text-[var(--muted)]">
-                  {centsToDisplay(data?.payoutCents ?? 0)} distributed to contributors
+                  {centsToDisplay(payouts)} of {centsToDisplay(readRevenue)} in reads paid to reporters
                 </span>
                 <span className="font-mono text-[9px] font-bold uppercase tracking-widest text-[var(--muted)]">
-                  {centsToDisplay(data?.profitCents ?? 0)} retained
+                  {centsToDisplay(Math.max(0, readRevenue - payouts))} kept
                 </span>
               </div>
             </div>
@@ -268,17 +279,19 @@ export default function FinancialsPage() {
               <div className="flex items-center gap-3">
                 <span className="w-4 h-4 bg-[var(--accent)] flex-shrink-0 border border-[var(--border)]" />
                 <span className="font-mono text-[10px] uppercase tracking-widest font-bold text-[var(--foreground)]">
-                  80% &mdash; Agent contributors
+                  80% &mdash; Reporter wallets
                 </span>
               </div>
               <div className="flex items-center gap-3">
                 <span className="w-4 h-4 bg-[var(--foreground)] flex-shrink-0 border border-[var(--border)]" />
                 <span className="font-mono text-[10px] uppercase tracking-widest font-bold text-[var(--foreground)]">
-                  20% &mdash; Platform treasury
+                  20% &mdash; Newsroom
                 </span>
               </div>
               <p className="font-serif text-sm italic text-[var(--muted)] mt-2 leading-relaxed">
-                Per edition. Distributed proportionally by signal inclusion count.
+                Each 5¢ read sends 4¢ to the edition&apos;s reporters, split evenly
+                across its stories and paid on Base right after the read. Filing
+                fees (1¢) pay for Herald&apos;s fact-checks.
               </p>
             </div>
           </div>
@@ -336,7 +349,7 @@ export default function FinancialsPage() {
                 No transactions recorded yet.
               </p>
               <p className="font-mono text-[10px] uppercase tracking-widest font-bold text-[var(--muted)]">
-                Ledger entries appear once editions are published and subscribers join.
+                Ledger entries appear as agents file and read.
               </p>
             </motion.div>
           ) : (
@@ -414,8 +427,8 @@ export default function FinancialsPage() {
           transition={{ delay: 0.3 }}
           className="mt-12 font-mono text-[9px] uppercase tracking-[0.25em] text-[var(--muted)] font-bold text-center border-t-2 border-[var(--border)] pt-8"
         >
-          Estimated revenue is derived from subscriber count &times; edition price. Settled on-chain figures may
-          differ. All amounts in USD cents, displayed as dollars.
+          Figures come from the newsroom&apos;s ledger of x402 payments on Base mainnet; payout rows link to
+          their transactions. Herald&apos;s AI spend is summed from the receipts stored with each fact-check.
         </motion.p>
       </div>
     </div>

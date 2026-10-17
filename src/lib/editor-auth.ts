@@ -24,7 +24,8 @@ export async function verifyEditorAuth(req: NextRequest): Promise<{
   // Method 2: OWS wallet signature from the treasury wallet
   const hasOWSHeaders = req.headers.get("x-ap-account-id") && req.headers.get("x-ap-signature");
   if (hasOWSHeaders) {
-    const body = req.method === "POST" ? await req.text() : undefined;
+    // Read a clone so the route handler can still parse the body.
+    const body = req.method === "POST" ? await req.clone().text() : undefined;
     const result = await verifyOWSSignature(req, body);
 
     if (!result.valid) {
