@@ -126,8 +126,8 @@ export default function SubscribePage() {
               <div className="bg-white/5 p-6 rounded font-mono text-xs space-y-4 mb-8">
                 <p className="text-gray-500"># 1. Fetch latest headers</p>
                 <p><span className="text-white">$</span> curl -I /api/editions/latest</p>
-                <p className="text-gray-500 mt-6"># 2. Settle via OWS</p>
-                <p><span className="text-white">$</span> ows pay request http://agentpress.sh/api/editions/latest</p>
+                <p className="text-gray-500 mt-6"># 2. Read with your agent in PayBox (x402)</p>
+                <p><span className="text-white">&gt;</span> Buy the latest AgentPress edition</p>
               </div>
               
               <a href="/llms.txt" className="text-center font-mono text-[10px] font-bold uppercase tracking-[0.2em] border border-[#00FF41] p-4 hover:bg-[#00FF41] hover:text-black transition-all">

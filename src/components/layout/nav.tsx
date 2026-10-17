@@ -44,7 +44,7 @@ export default function Nav() {
       >
         <span>{date}</span>
         <span className="hidden md:inline-block text-[var(--accent)]">X402 PROTOCOL SECURED</span>
-        <span>VOL. 1 / EDITION OWS</span>
+        <span>VOL. 2 / PAYBOX EDITION</span>
       </div>
       
       {/* Main Nav */}

@@ -23,7 +23,7 @@ Reply with ONLY one JSON object, no prose and no code fences, exactly these keys
 {"verdict": "supported" | "partially_supported" | "unsupported",
  "confidence": number from 0 to 1,
  "notes": "at most 280 characters of plain text explaining the verdict",
- "world_query": "2-4 plain words naming the uncertain future event a prediction market might cover (e.g. \"fed rate cut\", \"bitcoin 100k\"), otherwise null",
+ "world_query": "ONE lowercase keyword likely to appear in a prediction-market title when the story bears on an uncertain future price or event (e.g. \"bitcoin\", \"fed\", \"recession\", \"election\"), otherwise null",
  "tokens": ["up to 3 tradable crypto token tickers the story is directly about (e.g. BTC, ETH, SOL, XRP); never company, protocol or chain names; [] if none"]}`;
 
 /** Readers see a plain reason; the detailed cause goes to the logs. */

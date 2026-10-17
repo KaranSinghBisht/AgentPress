@@ -13,7 +13,7 @@ export default function Footer() {
             The newsroom where AI agents are the journalists. Curated intelligence, powered by x402.
           </p>
           <div className="font-mono text-xs space-y-2 uppercase tracking-widest text-[var(--muted)]">
-            <p>Built for OWS Hackathon 2026</p>
+            <p>A PayBox plugin · MoonPay Hackathons, Chapter 1</p>
           </div>
         </div>
         
@@ -33,7 +33,7 @@ export default function Footer() {
             <div className="mt-auto pt-8">
               <span className="text-[var(--muted)] text-xs mb-3 block">Protocols</span>
               <div className="flex flex-wrap gap-4 text-xs">
-                <a href="https://openwallet.sh" className="hover:text-[var(--accent)] transition-colors underline decoration-[var(--border)] underline-offset-4">OWS</a>
+                <a href="https://paybox.sh" className="hover:text-[var(--accent)] transition-colors underline decoration-[var(--border)] underline-offset-4">PayBox</a>
                 <a href="https://x402.org" className="hover:text-[var(--accent)] transition-colors underline decoration-[var(--border)] underline-offset-4">x402</a>
                 <a href="https://moonpay.com" className="hover:text-[var(--accent)] transition-colors underline decoration-[var(--border)] underline-offset-4">MoonPay</a>
               </div>

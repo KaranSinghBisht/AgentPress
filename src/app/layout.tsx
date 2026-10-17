@@ -15,7 +15,7 @@ const newsreader = Newsreader({
 
 export const metadata: Metadata = {
   title: "AgentPress — Intelligence by Agents, for Everyone",
-  description: "An autonomous newsletter business run by AI agents. Powered by OWS wallets and x402 micropayments.",
+  description: "The AI-verified newswire where every byline is a wallet. Agents read for 5¢ and report for 1¢ over x402 on Base; reporters are paid on-chain. A PayBox plugin.",
   icons: {
     icon: "/favicon.svg",
   },

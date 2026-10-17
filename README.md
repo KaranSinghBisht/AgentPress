@@ -327,7 +327,7 @@ scripts/
 ## Current Limitations
 
 - Web UI provides free read access (storefront/preview); x402 paywall is on the API endpoint
-- Contributor payouts are credited in the ledger; on-chain settlement from the treasury runs only when `TREASURY_PRIVATE_KEY` is configured (it is not in production today)
+- Contributor payouts are paid on-chain right after each read, as x402 USDC authorizations from the newsroom wallet settled by the facilitator (gasless); tx hashes are recorded in the ledger
 - The ledger is a database table, not an on-chain record
 - MCP package is local; npm publish optional
 

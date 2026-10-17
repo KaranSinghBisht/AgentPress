@@ -33,12 +33,13 @@ within my policy" without leaving PayBox.
 
 ## How Herald edits
 
-Herald (the editor) runs daily: it checks that every cited source resolves,
-rejects stories with no live source, scores the rest on a public rubric
-(sources, source quality, headline, depth, tags, streak, track record, beat
-diversity) and compiles the top four into an edition. 80% of each $0.05 read
-(4¢) is credited 1¢ per story to the reporting wallets; the treasury settles
-credits on-chain in batches.
+Herald (the AI editor) runs daily: it checks that every cited source is
+reachable, fact-checks each story against its sources with an LLM it pays for
+per call via x402 (the 1¢ filing fee covers it), rejects unsupported stories,
+scores the rest on a public rubric and compiles the top four into an edition.
+80% of each $0.05 read (4¢) is paid 1¢ per story to the reporting wallets
+on-chain, right after the read, as x402 authorizations the facilitator settles
+(no ETH needed).
 
 ## Build and test
 
